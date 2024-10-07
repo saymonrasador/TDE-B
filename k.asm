@@ -11,20 +11,55 @@
     VELOCIDADE_NAVE dw 4   ; Velocidade da nave principal
     
     NAVE_FIXA_Y dw 0, 14, 28, 42, 56, 70, 84, 98 ;coordenadas das 8 naves fixas
-    NAVE_CORES db 0Fh, 1Eh, 2Ch, 3Ah, 4Dh, 5Bh, 6Eh, 7Fh, 8Ch ; Cores das naves
+    NAVE_CORES db 0Fh, 1Eh, 2Ch, 3Ah, 4Dh, 5Bh, 6Eh, 7Fh ; Cores das naves
 .code
+
+
+
+DRAW_ALL_NAVES proc
+    ; Desenhar as 8 naves
+    mov CX, 8          
+    xor BX, BX 
+    
+    DRAW_LOOP:
+    mov AX, BX          
+    shl AX, 1            ; AX = BX * 2 (cada entrada em NAVE_FIXA_Y tem 2 bytes)
+    mov SI, offset NAVE_FIXA_Y  
+    add SI, AX
+    mov DX, [SI]         ; Usar DX para a posi??o Y da nave fixa 
+    mov BX, BX           ; Posi??o X das naves fixas ? BX (para espa?ar as naves)
+    
+    mov AL, [NAVE_CORES + BX]   ; Cor da nave fixa
+    push CX                     ; Salvar contador do loop (CX)
+    
+    call DRAW_NAVE       ; Desenhar a nave fixa
+    pop CX
+    inc BX               ; Pr?xima nave fixa
+    loop DRAW_LOOP
+    
+    
+    ; Desenhar a nave principal
+    mov CX, NAVE_X       ; Carrega NAVE_X para CX
+    mov DX, NAVE_Y       ; Carrega NAVE_Y para DX
+    mov AL, 0Fh          ; Cor da nave principal (pode alterar se necess?rio)
+    call DRAW_NAVE       ; Desenhar a nave principal
+
+    ret
+endp
+
 
 
 DRAW_NAVE proc
     mov AX, VIDEO_SEGMENT
-    mov ES, AX   ; Configura ES para apontar para o segmento de v?deo
+    mov ES, AX    ; Configura ES para apontar para o segmento de v?deo
 
     ; Calcular o endere?o de v?deo baseado em X e Y (posi??o da nave)
-    mov BX, NAVE_Y 
+    mov BX, DX     ; BX recebe a posi??o Y
     mov AX, 320
-    mul BX           ; AX = NAVE_Y * 320 (cada linha tem 320 pixels)
-    add AX, NAVE_X 
-    mov DI, AX       ; DI recebe a posi??o de mem?ria de v?deo
+    mul BX         ; AX = Y * 320 (cada linha tem 320 pixels)
+    add AX, CX     ; Soma X ? posi??o de v?deo (posi??o X)
+    mov DI, AX     ; DI recebe a posi??o de mem?ria de v?deo
+    
     
     ; Desenhar a nave usando a cor passada em AL
     mov CX, 9        ; N?mero de pixels a desenhar na primeira linha
@@ -64,6 +99,46 @@ DRAW_NAVE proc
 
     ret
 endp
+
+
+
+MOVE_NAVE proc
+    ; Esperar por uma tecla pressionada
+    mov AH, 01h          ; Checar se uma tecla foi pressionada
+    int 16h              ; int do teclado
+    jz END_MOVE_NAVE     ; Se nenhuma tecla foi pressionada, sai do procedimento
+    mov AH, 00h          ; L? a tecla pressionada
+    int 16h              ; int do teclado
+
+    cmp AH, 48h          ; C?digo da seta para cima (?)
+    je MOVE_UP
+    cmp AH, 50h          ; C?digo da seta para baixo (?)
+    je MOVE_DOWN
+    jmp END_MOVE_NAVE    ; Se n?o for uma das teclas esperadas, sai do procedimento
+    
+    MOVE_UP:
+    call CLEAR_NAVE      ; Apaga a nave na posi??o atual
+    cmp NAVE_Y, 0        ; Verifica se a nave est? no limite superior
+    jle END_MOVE_NAVE    ; Se j? est? no topo, n?o faz nada
+    mov AX, VELOCIDADE_NAVE
+    sub NAVE_Y, AX       ; Move a nave para cima diminuindo Y
+    call DRAW_NAVE       ; Desenha a nave na nova posi??o
+    jmp END_MOVE_NAVE
+
+    MOVE_DOWN:
+    call CLEAR_NAVE      ; Apaga a nave na posi??o atual
+    mov AX, NAVE_Y       ; Verificar se a nave est? no limite inferior da tela
+    add AX, NAVE_HEIGHT
+    cmp AX, SCREEN_HEIGHT; Verifica se a nave vai ultrapassar a tela
+    jge END_MOVE_NAVE    ; Se j? est? no limite inferior, n?o faz nada
+    mov AX, VELOCIDADE_NAVE
+    add NAVE_Y, AX       ; Move a nave para baixo aumentando Y
+    call DRAW_NAVE       ; Desenha a nave na nova posi??o
+    
+    END_MOVE_NAVE:
+    ret
+endp
+
 
 
 CLEAR_NAVE proc
@@ -120,72 +195,6 @@ CLEAR_NAVE proc
 endp
 
 
-
-DRAW_ALL_NAVES proc
-    ; Desenhar a nave principal
-    mov AL, [NAVE_CORES + 8]  ; Cor da nave principal (?ltima cor)
-    call DRAW_NAVE
-
-    mov CX, 8           ; Contador de naves fixas
-    xor BX, BX         
-    DRAW_LOOP:
-    mov AX, BX          
-    shl AX, 1           ; AX = BX * 2 (cada entrada em NAVE_FIXA_Y tem 2 bytes)
-
-    ; Posi??o Y da nave fixa
-    mov SI, offset NAVE_FIXA_Y  
-    add SI, AX                  ; SI = SI + AX
-    mov AX, [SI]              
-    mov NAVE_Y, AX              
-    mov NAVE_X, 0               
-
-    mov AL, [NAVE_CORES + BX]   ; Pega a cor correspondente ? nave fixa
-    
-    call DRAW_NAVE
-    inc BX
-    loop DRAW_LOOP
-
-    
-    ret
-endp
-
-
-MOVE_NAVE proc
-    ; Esperar por uma tecla pressionada
-    mov AH, 01h          ; Checar se uma tecla foi pressionada
-    int 16h              ; int do teclado
-    jz END_MOVE_NAVE     ; Se nenhuma tecla foi pressionada, sai do procedimento
-    mov AH, 00h          ; L? a tecla pressionada
-    int 16h              ; int do teclado
-
-    cmp AH, 48h          ; C?digo da seta para cima (?)
-    je MOVE_UP
-    cmp AH, 50h          ; C?digo da seta para baixo (?)
-    je MOVE_DOWN
-    jmp END_MOVE_NAVE    ; Se n?o for uma das teclas esperadas, sai do procedimento
-    
-    MOVE_UP:
-    call CLEAR_NAVE      ; Apaga a nave na posi??o atual
-    cmp NAVE_Y, 0        ; Verifica se a nave est? no limite superior
-    jle END_MOVE_NAVE    ; Se j? est? no topo, n?o faz nada
-    mov AX, VELOCIDADE_NAVE
-    sub NAVE_Y, AX       ; Move a nave para cima diminuindo Y
-    call DRAW_NAVE       ; Desenha a nave na nova posi??o
-    jmp END_MOVE_NAVE
-
-    MOVE_DOWN:
-    call CLEAR_NAVE      ; Apaga a nave na posi??o atual
-    mov AX, NAVE_Y       ; Verificar se a nave est? no limite inferior da tela
-    add AX, NAVE_HEIGHT
-    cmp AX, SCREEN_HEIGHT; Verifica se a nave vai ultrapassar a tela
-    jge END_MOVE_NAVE    ; Se j? est? no limite inferior, n?o faz nada
-    mov AX, VELOCIDADE_NAVE
-    add NAVE_Y, AX       ; Move a nave para baixo aumentando Y
-    call DRAW_NAVE       ; Desenha a nave na nova posi??o
-    
-    END_MOVE_NAVE:
-    ret
-endp
 
 INICIO:   
     mov AX,@DATA
