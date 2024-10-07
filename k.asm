@@ -1,5 +1,5 @@
 .model small
-.stack 100H         ; define uma pilha de 256 bytes (100H)
+.stack 100H         ; define uma pilha de 256 bytes (100H))
 .data
     VIDEO_SEGMENT dw 0A000h
     
