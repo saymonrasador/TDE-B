@@ -1,5 +1,5 @@
 .model small
-.stack 100H         ; define uma pilha de 256 bytes (100H))
+.stack 100H         ; define uma pilha de 256 bytes (100H)
 .data
     VIDEO_SEGMENT dw 0A000h
     
@@ -10,7 +10,7 @@
     SCREEN_HEIGHT dw 200   ;Altura da tela (320x200 modo gr?fico)
     VELOCIDADE_NAVE dw 4   ; Velocidade da nave principal
     
-    NAVE_FIXA_Y dw 0, 14, 28, 42, 56, 70, 84, 98 ;coordenadas das 8 naves fixas
+    NAVE_FIXA_Y dw 0, 19, 38, 57, 76, 95, 114, 133 ;coordenadas das 8 naves fixas
     NAVE_CORES db 0Fh, 1Eh, 2Ch, 3Ah, 4Dh, 5Bh, 6Eh, 7Fh ; Cores das naves
 .code
 
@@ -22,19 +22,18 @@ DRAW_ALL_NAVES proc
     xor BX, BX 
     
     DRAW_LOOP:
-    mov AX, BX          
-    shl AX, 1            ; AX = BX * 2 (cada entrada em NAVE_FIXA_Y tem 2 bytes)
+    mov AX, BX           
+    shl AX, 1            ; Cada entrada em NAVE_FIXA_Y tem 2 bytes, por isso desloca
     mov SI, offset NAVE_FIXA_Y  
-    add SI, AX
-    mov DX, [SI]         ; Usar DX para a posi??o Y da nave fixa 
-    mov BX, BX           ; Posi??o X das naves fixas ? BX (para espa?ar as naves)
+    add SI, AX           ; Calcula o endere?o Y da nave e passa para DX
+    mov DX, [SI]         ; DX ? a posicao Y das naves fixas 
     
     mov AL, [NAVE_CORES + BX]   ; Cor da nave fixa
-    push CX                     ; Salvar contador do loop (CX)
     
+    push CX              ; Salvar contador do loop (CX)
     call DRAW_NAVE       ; Desenhar a nave fixa
     pop CX
-    inc BX               ; Pr?xima nave fixa
+    inc BX               ; Proxima nave fixa
     loop DRAW_LOOP
     
     
@@ -49,22 +48,23 @@ endp
 
 
 
+
 DRAW_NAVE proc
     mov AX, VIDEO_SEGMENT
-    mov ES, AX    ; Configura ES para apontar para o segmento de v?deo
+    mov ES, AX    ; Configura ES para apontar para o segmento de video
 
-    ; Calcular o endere?o de v?deo baseado em X e Y (posi??o da nave)
-    mov BX, DX     ; BX recebe a posi??o Y
+    ; Calcular o endereco de video baseado em X e Y (posicao da nave)
+    mov BX, DX     ; DX guarda a posicao Y
     mov AX, 320
     mul BX         ; AX = Y * 320 (cada linha tem 320 pixels)
-    add AX, CX     ; Soma X ? posi??o de v?deo (posi??o X)
-    mov DI, AX     ; DI recebe a posi??o de mem?ria de v?deo
+    add AX, CX     ; CX guarda a posicao X
+    mov DI, AX     ; DI recebe a posicao de memoria de video
     
     
     ; Desenhar a nave usando a cor passada em AL
-    mov CX, 9        ; N?mero de pixels a desenhar na primeira linha
+    mov CX, 9        ; Numero de pixels a desenhar na primeira linha
     rep stosb        ; Desenha a primeira linha da nave
-    add DI, 320 - 7  ; Avan?a 1 linha e ajusta a posi??o
+    add DI, 320 - 7  ; Avanca 1 linha e ajusta a posicao
 
     mov CX, 2        ; Segunda linha
     rep stosb        
@@ -86,7 +86,7 @@ DRAW_NAVE proc
     rep stosb        
     add DI, 320 - 6
 
-    mov CX, 2        ; S?tima linha
+    mov CX, 2        ; Setima linha
     rep stosb        
     add DI, 320 - 2
 
@@ -203,11 +203,10 @@ INICIO:
     mov AX, 13h     ;Configurar modo gr?fico 320x200 com 256 cores
     int 10h
 
-
-    call DRAW_ALL_NAVES
    
     WAIT_LOOP:      ; Loop infinito para manter o gr?fico na tela
     call MOVE_NAVE  ; Mover a nave principal
+    call DRAW_ALL_NAVES
     jmp WAIT_LOOP
         
 end INICIO
