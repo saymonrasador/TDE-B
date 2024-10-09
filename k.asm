@@ -15,11 +15,9 @@
     NAVE_FIXA_Y dw 0, 19, 38, 57, 76, 95, 114, 133 ;coordenadas das 8 naves fixas
     NAVE_CORES db 9h, 0Ah, 6h, 5h, 0Eh, 7h, 0Dh, 0Ch ; Cores das naves
     ;;escreve ARCADE GAME na tela
-    ASCII_ART  db  ' ___ _______  ____ _____    __| _/____ ',
-               db  ' \__ \\_  __ \/ ___\\__  \  / __ |/ __ \',
-               db  '  / _ \|  | \|  \___ / __ \/ /_/ \  ___/',
-               db  ' (___  /__|   \___  >____  |____ |\___  ',
-               db  '    \/           \/     \/     \/    \/$',
+    TITULO_JOGO db 'K-STAR PATROL$'
+    BOTAO_INICIAR db 'INICIAR$'
+    BOTAO_SAIR db 'SAIR$'
 .code
 
 DRAW_ALL_NAVES proc
@@ -163,11 +161,39 @@ endp
 
 DRAW_MENU proc
     ;; Escreve o nome do jogo que esta na area de dados
-    mov AX, VIDEO_SEGMENT
-    mov ES, AX
-    mov SI, offset ASCII_ART
-    mov DX, SI
+
+    ;; posiciona cursor e escreve o nome do jogo
+    mov BH, 0 ; pagina 0
+    MOV DH, 03H ; linha 3
+    MOV DL, 0CH ; coluna 15
+    MOV AH, 02h ; funcao 02h - posicionar cursor
+    INT 10h
+    lea DX, TITULO_JOGO
     call PRINT_STRING
+
+    ;; posiciona cursor e escreve o botao de iniciar
+    mov BH, 0 ; pagina 0
+    MOV DH, 12H ; linha 18
+    MOV DL, 0FH ; coluna 15
+    MOV AH, 02h ; funcao 02h - posicionar cursor
+    INT 10h
+    lea DX, BOTAO_INICIAR
+    call PRINT_STRING
+    
+    ;; posiciona cursor e escreve o botao de iniciar
+    mov BH, 0 ; pagina 0
+    MOV DH, 13H ; linha 19
+    MOV DL, 0FH ; coluna 15
+    MOV AH, 02h ; funcao 02h - posicionar cursor
+    INT 10h
+    lea DX, BOTAO_SAIR
+    call PRINT_STRING
+
+    mov CX, NAVE_X       
+    mov DX, NAVE_Y       
+    mov AL, 0Fh          ; Cor da nave principal
+    call DRAW_NAVE      
+
 endp
 
 ; Escreve uma string terminada por '$' na tela, cujo endereço
@@ -179,7 +205,16 @@ PRINT_STRING proc
     pop AX
     ret
 endp
-
+;
+;;proc que escreve botao na tela com string presente em DX
+;PRINT_BOTAO proc
+;    push AX
+;    mov AH, 09h ; funcao 09h - escrever string
+;    int 21h
+;    pop AX
+;    ret
+;endp
+;
 
 MOVE_NAVE proc
     push AX
@@ -286,8 +321,9 @@ GET_INPUT proc
 endp
 
 
-LIMPA_TELA proc
-    mov AX, 13h     ;Configurar modo gr?fico 320x200 com 256 cores
+SET_MODO_GRAFICO proc
+    mov AH, 00h     ;Configurar modo gr?fico 320x200 com 256 cores
+    mov AL, 13h     ;Configurar modo gr?fico 320x200 com 256 cores
     int 10h
     ret
 endp
@@ -296,14 +332,15 @@ INICIO:
     mov AX,@DATA
     mov DS,AX 
             
-    call LIMPA_TELA
+    call SET_MODO_GRAFICO
     call DRAW_MENU
+
     WAIT_MEU:
     call GET_INPUT
     cmp AL, 'S'
     jne WAIT_MEU
 
-    call LIMPA_TELA
+    call SET_MODO_GRAFICO
 
     WAIT_LOOP:      ; Loop infinito para manter o gr?fico na tela
     call MOVE_NAVE  ; Mover a nave principal

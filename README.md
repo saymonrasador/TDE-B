@@ -12,3 +12,6 @@
 - ss.asm  -->  Código com a nave se movendo e funcionando
 - k.asm   -->  Código em desenvolvimento para desenhar as 8 naves fixas a esquerda
 
+
+# COMO STARTAR O JOGO NO MENU?
+- a tecla shift + S inicia o jogo
