@@ -5,13 +5,15 @@
     
     NAVE_X dw 2Fh          ;Posicao inicial X da nave principal
     NAVE_Y dw 64h          ;Posicao inicial Y da nave principal
+    ALIEN_X dw 104h        ;Posicao inicial X da nave alienigena
+    ALIEN_Y dw 64h         ;Posicao inicial Y da nave alienigena
     NAVE_HEIGHT dw 9       ;Altura da nave (9 pixels)
     NAVE_WIDTH dw 15       ;Largura da nave (15 pixels)
     SCREEN_HEIGHT dw 200   ;Altura da tela (320x200 modo gr?fico)
     VELOCIDADE_NAVE dw 4   ; Velocidade da nave principal
     
     NAVE_FIXA_Y dw 0, 19, 38, 57, 76, 95, 114, 133 ;coordenadas das 8 naves fixas
-    NAVE_CORES db 0Fh, 1Eh, 2Ch, 3Ah, 4Dh, 5Bh, 6Eh, 7Fh ; Cores das naves
+    NAVE_CORES db 9h, 0Ah, 6h, 5h, 0Eh, 7h, 0Dh, 0Ch ; Cores das naves
 .code
 
 
@@ -25,8 +27,8 @@ DRAW_ALL_NAVES proc
     mov AX, BX           
     shl AX, 1            ; Cada entrada em NAVE_FIXA_Y tem 2 bytes, por isso desloca
     mov SI, offset NAVE_FIXA_Y  
-    add SI, AX           ; Calcula o endere?o Y da nave e passa para DX
-    mov DX, [SI]         ; DX ? a posicao Y das naves fixas 
+    add SI, AX           ; Calcula o endereco Y da nave e passa para DX
+    mov DX, [SI]         ; DX e a posicao Y das naves fixas 
     
     mov AL, [NAVE_CORES + BX]   ; Cor da nave fixa
     
@@ -34,18 +36,17 @@ DRAW_ALL_NAVES proc
     call DRAW_NAVE       ; Desenhar a nave fixa
     pop CX
     inc BX               ; Proxima nave fixa
-    loop DRAW_LOOP
+    loop DRAW_LOOP       ; Decrementa CX=8 ate CX=0
     
     
     ; Desenhar a nave principal
-    mov CX, NAVE_X       ; Carrega NAVE_X para CX
-    mov DX, NAVE_Y       ; Carrega NAVE_Y para DX
-    mov AL, 0Fh          ; Cor da nave principal (pode alterar se necess?rio)
-    call DRAW_NAVE       ; Desenhar a nave principal
+    mov CX, NAVE_X       
+    mov DX, NAVE_Y       
+    mov AL, 0Fh          ; Cor da nave principal
+    call DRAW_NAVE      
 
     ret
 endp
-
 
 
 
@@ -54,10 +55,9 @@ DRAW_NAVE proc
     mov ES, AX    ; Configura ES para apontar para o segmento de video
 
     ; Calcular o endereco de video baseado em X e Y (posicao da nave)
-    mov BX, DX     ; DX guarda a posicao Y
     mov AX, 320
-    mul BX         ; AX = Y * 320 (cada linha tem 320 pixels)
-    add AX, CX     ; CX guarda a posicao X
+    mul DX  
+    add AX, CX
     mov DI, AX     ; DI recebe a posicao de memoria de video
     
     
@@ -99,6 +99,66 @@ DRAW_NAVE proc
 
     ret
 endp
+
+
+
+DRAW_ALIEN proc
+    mov AX,VIDEO_SEGMENT
+    mov ES,AX   ; Configura ES para apontar para o segmento de video
+
+    ; Calcular o endereco de video baseado em X e Y (posicao da nave)
+    mov BX, ALIEN_Y 
+    mov AX, 320
+    mul BX           ; AX = NAVE_Y * 320 (cada linha tem 320 pixels)
+    add AX, ALIEN_X 
+    mov DI, AX       ; DI recebe a posicao de memoria de video
+    
+
+    mov AL, 9h      ; Cor do pixel (branca)
+    
+    
+    ; Desenhar a nave usando a cor passada em AL
+    add DI, 9
+    mov CX, 6        ; Numero de pixels a desenhar na primeira linha
+    rep stosb        ; Desenha a primeira linha da nave
+    add DI, 320 - 6  ; Avanca 1 linha e ajusta a posicao
+
+    mov CX, 1        ; Segunda linha
+    rep stosb        
+    add DI, 320 - 7
+    
+    mov CX, 0        ; Terceira linha
+    rep stosb        
+    add DI, 320 - 0
+
+    mov CX, 5        ; Quarta linha
+    rep stosb        
+    add DI, 320 - 9
+
+    mov CX, 13       ; Quinta linha
+    rep stosb        
+    add DI, 320 - 8
+
+    mov CX, 5        ; Sexta linha
+    rep stosb        
+    add DI, 320 + 1
+
+    mov CX, 0        ; Setima linha
+    rep stosb        
+    add DI, 320 - 0
+
+    mov CX, 2        ; Oitava linha
+    rep stosb        
+    add DI, 320 - 2
+
+    mov CX, 6        ; Nona linha
+    rep stosb
+
+    ret
+endp
+
+
+
 
 
 
@@ -207,6 +267,7 @@ INICIO:
     WAIT_LOOP:      ; Loop infinito para manter o gr?fico na tela
     call MOVE_NAVE  ; Mover a nave principal
     call DRAW_ALL_NAVES
+    call DRAW_ALIEN
     jmp WAIT_LOOP
         
 end INICIO
