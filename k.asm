@@ -14,9 +14,13 @@
     
     NAVE_FIXA_Y dw 0, 19, 38, 57, 76, 95, 114, 133 ;coordenadas das 8 naves fixas
     NAVE_CORES db 9h, 0Ah, 6h, 5h, 0Eh, 7h, 0Dh, 0Ch ; Cores das naves
+    ;;escreve ARCADE GAME na tela
+    ASCII_ART  db  ' ___ _______  ____ _____    __| _/____ ',
+               db  ' \__ \\_  __ \/ ___\\__  \  / __ |/ __ \',
+               db  '  / _ \|  | \|  \___ / __ \/ /_/ \  ___/',
+               db  ' (___  /__|   \___  >____  |____ |\___  ',
+               db  '    \/           \/     \/     \/    \/$',
 .code
-
-
 
 DRAW_ALL_NAVES proc
     ; Desenhar as 8 naves
@@ -157,18 +161,31 @@ DRAW_ALIEN proc
     ret
 endp
 
+DRAW_MENU proc
+    ;; Escreve o nome do jogo que esta na area de dados
+    mov AX, VIDEO_SEGMENT
+    mov ES, AX
+    mov SI, offset ASCII_ART
+    mov DX, SI
+    call PRINT_STRING
+endp
 
-
-
+; Escreve uma string terminada por '$' na tela, cujo endereço
+; está no registrador DX
+PRINT_STRING proc
+    push AX
+    mov AH, 09h
+    int 21h
+    pop AX
+    ret
+endp
 
 
 MOVE_NAVE proc
+    push AX
     ; Esperar por uma tecla pressionada
-    mov AH, 01h          ; Checar se uma tecla foi pressionada
-    int 16h              ; int do teclado
-    jz END_MOVE_NAVE     ; Se nenhuma tecla foi pressionada, sai do procedimento
-    mov AH, 00h          ; L? a tecla pressionada
-    int 16h              ; int do teclado
+    call GET_INPUT
+    jz END_MOVE_NAVE      ; Se nao houver tecla pressionada, sai do procedimento
 
     cmp AH, 48h          ; C?digo da seta para cima (?)
     je MOVE_UP
@@ -196,6 +213,7 @@ MOVE_NAVE proc
     call DRAW_NAVE       ; Desenha a nave na nova posi??o
     
     END_MOVE_NAVE:
+    pop AX
     ret
 endp
 
@@ -255,15 +273,38 @@ CLEAR_NAVE proc
 endp
 
 
+GET_INPUT proc
+    mov AH, 01h
+    int 16h
+    jz GET_INPUT_EXIT
+
+    mov AH, 00h
+    int 16h
+
+    GET_INPUT_EXIT:
+    ret
+endp
+
+
+LIMPA_TELA proc
+    mov AX, 13h     ;Configurar modo gr?fico 320x200 com 256 cores
+    int 10h
+    ret
+endp
 
 INICIO:   
     mov AX,@DATA
     mov DS,AX 
             
-    mov AX, 13h     ;Configurar modo gr?fico 320x200 com 256 cores
-    int 10h
+    call LIMPA_TELA
+    call DRAW_MENU
+    WAIT_MEU:
+    call GET_INPUT
+    cmp AL, 'S'
+    jne WAIT_MEU
 
-   
+    call LIMPA_TELA
+
     WAIT_LOOP:      ; Loop infinito para manter o gr?fico na tela
     call MOVE_NAVE  ; Mover a nave principal
     call DRAW_ALL_NAVES
