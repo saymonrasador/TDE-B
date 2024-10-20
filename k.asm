@@ -2,7 +2,7 @@
 .stack 100H         ; Pilha de 256 bytes
 
 .data
-    VIDEO_SEGMENT dw 0A000h 
+    VIDEO_SEGMENT dw 0A000H 
     
     NAVE_ALIADA db 0Fh, 0Fh, 0Fh, 0Fh, 0Fh, 0Fh, 0Fh, 0Fh, 0Fh, 0h, 0h, 0h, 0h, 0h, 0h 
               db 0h,   0H, 0Fh, 0Fh, 0h, 0h, 0h, 0h, 0h, 0h, 0h, 0h, 0h, 0h, 0h  
