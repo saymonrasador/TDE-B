@@ -40,7 +40,7 @@
     NAVE_ALIENIGENA_Y dw 50h    
     TIRO_X dw 1Fh        
     TIRO_Y dw 50h         
-    TIRO_ATIVO db 0             ; 0 = tiro inativo, 1 = tiro ativo
+    TIRO_ATIVO db 0             ; 0 = tiro inativo, 1=tiro ativo
     NAVE_Y_START dw 20          ; Posicao inicial Y da primeira nave fixa
     SPACING     dw 20           ; Espacamento entre as naves fixas
     COR_NAVE_PRINCIPAl db 0Fh
