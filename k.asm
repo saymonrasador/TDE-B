@@ -637,6 +637,27 @@ GET_INPUT proc
     ret
 endp
 
+MOVE_HORIZONTAL proc
+    mov DX, [NAVE_PRINCIPAL_Y]     
+    mov BX, [NAVE_PRINCIPAL_X] 
+
+    mov DI, BX              ; DI contem a posicao Y atual da nave principal
+    add DI, VELOCIDADE_PRINCIPAL
+    cmp DI, 320             ; Limite superior da tela
+    jg FIM_DOWN_HORIZ             ; Se esta acima do limite, termina a funcao
+    
+    push DI
+    call APAGAR_NAVE
+    pop DI 
+    mov [NAVE_PRINCIPAL_X], DI  ; Atualiza posicao da nave e redesenha    
+    call DRAW_NAVE_PRINCIPAL
+    ret
+    
+    FIM_DOWN_HORIZ:
+    mov BX, 0
+    ret
+endp
+
 ;------------------- INICIO -------------------
 INICIO:   
     mov AX,@DATA 
@@ -646,8 +667,14 @@ INICIO:
     call DRAW_MENU
 
     WAIT_MEU:
+    ; Intervalo de 35 ms (35000 microssegundos)
+    xor CX, CX          ; Parte superior (16 bits mais significativos)
+    mov DX, 4E20h       ; Define o tempo (88B8H = 35.000)
+    mov AH, 86h
+    int 15h             ; Executa o delay de 35 ms
     call GET_INPUT
-    cmp AL, 'S'
+    cmp AL, 's'
+    call MOVE_HORIZONTAL
     jne WAIT_MEU
     
     
