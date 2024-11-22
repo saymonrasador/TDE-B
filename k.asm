@@ -50,6 +50,11 @@
     VELOCIDADE_TIRO dw 6
     VELOCIDADE_DIAGONAL dw 2
     
+    ;;escreve ARCADE GAME na tela
+    TITULO_JOGO db 'K-STAR PATROL$'
+    BOTAO_INICIAR db 'INICIAR$'
+    BOTAO_SAIR db 'SAIR$'
+    
 .code
 
 SET_VIDEO_MODE proc
@@ -571,13 +576,81 @@ TROCAR_NAVE proc
     ret
 endp
 
+; Escreve uma string terminada por '$' na tela, cujo endere?o
+; est? no registrador DX
+PRINT_STRING proc
+    push AX
+    mov AH, 09h
+    int 21h
+    pop AX
+    ret
+endp
 
+
+DRAW_MENU proc
+    ;; Escreve o nome do jogo que esta na area de dados
+
+    ;; posiciona cursor e escreve o nome do jogo
+    mov BH, 0 ; pagina 0
+    MOV DH, 03H ; linha 3
+    MOV DL, 0CH ; coluna 15
+    MOV AH, 02h ; funcao 02h - posicionar cursor
+    INT 10h
+    lea DX, TITULO_JOGO
+    call PRINT_STRING
+
+    ;; posiciona cursor e escreve o botao de iniciar
+    mov BH, 0 ; pagina 0
+    MOV DH, 12H ; linha 18
+    MOV DL, 0FH ; coluna 15
+    MOV AH, 02h ; funcao 02h - posicionar cursor
+    INT 10h
+    lea DX, BOTAO_INICIAR
+    call PRINT_STRING
+    
+    ;; posiciona cursor e escreve o botao de iniciar
+    mov BH, 0 ; pagina 0
+    MOV DH, 13H ; linha 19
+    MOV DL, 0FH ; coluna 15
+    MOV AH, 02h ; funcao 02h - posicionar cursor
+    INT 10h
+    lea DX, BOTAO_SAIR
+    call PRINT_STRING
+
+    mov CX, NAVE_PRINCIPAL_X       
+    mov DX, NAVE_PRINCIPAL_Y       
+    mov AL, 0Fh          ; Cor da nave principal
+    call DRAW_NAVE_PRINCIPAL      
+
+endp
+
+
+GET_INPUT proc
+    mov AH, 01h
+    int 16h
+    jz GET_INPUT_EXIT
+
+    mov AH, 00h
+    int 16h
+
+    GET_INPUT_EXIT:
+    ret
+endp
 
 ;------------------- INICIO -------------------
 INICIO:   
     mov AX,@DATA 
     mov DS,AX
 
+    call SET_VIDEO_MODE
+    call DRAW_MENU
+
+    WAIT_MEU:
+    call GET_INPUT
+    cmp AL, 'S'
+    jne WAIT_MEU
+    
+    
     call SET_VIDEO_MODE
     call DRAW_8_NAVES
     call DRAW_NAVE_PRINCIPAL 
