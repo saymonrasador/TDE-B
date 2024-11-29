@@ -33,7 +33,7 @@
                  db 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  
                  db 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0  
                  db 0Fh, 0Fh, 0Fh, 0Fh, 0Fh, 0Fh, 0Fh, 0, 0, 0, 0, 0, 0, 0, 0 
-                    
+
     NAVE_PRINCIPAL_X dw 2Fh        
     NAVE_PRINCIPAL_Y dw 50h      
     NAVE_ALIENIGENA_X dw 12Ch    
@@ -51,7 +51,19 @@
     VELOCIDADE_DIAGONAL dw 2
     
     ;;escreve ARCADE GAME na tela
-    TITULO_JOGO db 'K-STAR PATROL$'
+    TITULO_JOGO db "   _  __    ____  _____  ____  ____     " 
+                db "  / |/ /   / ___\/__ __\/  _ \/  __\    "
+                db "  |   /____|    \  / \  | / \||  \/|    "
+                db "  |   \____\___ |  | |  | |-|||    /    "
+                db "  \_|\_\   \____/  \_/  \_/ \|\_/\_\    "
+                db "                                        "
+                db "  ____  ____  _____  ____  ____  _      "
+                db " /  __\/  _ \/__ __\/  __\/  _ \/ \     "
+                db " |  \/|| / \|  / \  |  \/|| / \|| |     "
+                db " |  __/| |-||  | |  |    /| \_/|| |_/\  "
+                db " \_/   \_/ \|  \_/  \_/\_\\____/\____/  "
+                db "                                        $"
+                
     BOTAO_INICIAR db 'INICIAR$'
     BOTAO_SAIR db 'SAIR$'
     
@@ -588,12 +600,13 @@ endp
 
 
 DRAW_MENU proc
-    ;; Escreve o nome do jogo que esta na area de dados
+    push DX
 
+    ;; Escreve o nome do jogo que esta na area de dados
     ;; posiciona cursor e escreve o nome do jogo
     mov BH, 0 ; pagina 0
-    MOV DH, 03H ; linha 3
-    MOV DL, 0CH ; coluna 15
+    MOV DH, 00H ; linha 0
+    MOV DL, 01H ; coluna 1
     MOV AH, 02h ; funcao 02h - posicionar cursor
     INT 10h
     lea DX, TITULO_JOGO
@@ -617,10 +630,7 @@ DRAW_MENU proc
     lea DX, BOTAO_SAIR
     call PRINT_STRING
 
-    mov CX, NAVE_PRINCIPAL_X       
-    mov DX, NAVE_PRINCIPAL_Y       
-    mov AL, 0Fh          ; Cor da nave principal
-    call DRAW_NAVE_PRINCIPAL      
+    pop DX
 
 endp
 
@@ -638,23 +648,34 @@ GET_INPUT proc
 endp
 
 MOVE_HORIZONTAL proc
+    
+
     mov DX, [NAVE_PRINCIPAL_Y]     
     mov BX, [NAVE_PRINCIPAL_X] 
 
     mov DI, BX              ; DI contem a posicao Y atual da nave principal
     add DI, VELOCIDADE_PRINCIPAL
-    cmp DI, 320             ; Limite superior da tela
-    jg FIM_DOWN_HORIZ             ; Se esta acima do limite, termina a funcao
-    
+
+    ;;make DI=DI%320 so that it doesn't go out of bounds
+    push AX
+    push BX
+    push DX
+    mov AX, DI       ; Set the current position to AX
+    MOV BX, 300      ; Set the screen width (divisor) to 320
+    XOR DX, DX       ; Clear DX to ensure it starts at zero (for the high part of dividend)
+    DIV BX           ; Divide AX by BX
+                    ; Quotient in AX, remainder in DX
+    MOV DI, DX       ; Move the remainder (wrapped position) into DI
+    pop DX
+    pop BX
+    pop AX
+ 
     push DI
     call APAGAR_NAVE
     pop DI 
     mov [NAVE_PRINCIPAL_X], DI  ; Atualiza posicao da nave e redesenha    
     call DRAW_NAVE_PRINCIPAL
-    ret
     
-    FIM_DOWN_HORIZ:
-    mov BX, 0
     ret
 endp
 
@@ -666,6 +687,9 @@ INICIO:
     call SET_VIDEO_MODE
     call DRAW_MENU
 
+    mov [NAVE_PRINCIPAL_X], 0h
+    mov [NAVE_PRINCIPAL_Y], 70h
+
     WAIT_MEU:
     ; Intervalo de 35 ms (35000 microssegundos)
     xor CX, CX          ; Parte superior (16 bits mais significativos)
@@ -673,14 +697,17 @@ INICIO:
     mov AH, 86h
     int 15h             ; Executa o delay de 35 ms
     call GET_INPUT
-    cmp AL, 's'
     call MOVE_HORIZONTAL
+    cmp AL, 'S'
     jne WAIT_MEU
     
+    ;;reseta posi??po da nave principal
+    mov [NAVE_PRINCIPAL_X], 2Fh
+    mov [NAVE_PRINCIPAL_Y], 50h
     
     call SET_VIDEO_MODE
     call DRAW_8_NAVES
-    call DRAW_NAVE_PRINCIPAL 
+    call DRAW_NAVE_PRINCIPAL
     
     MAIN_LOOP:
     ; Intervalo de 35 ms (35000 microssegundos)
