@@ -64,7 +64,7 @@
                 db " \_/   \_/ \|  \_/  \_/\_\\____/\____/  "
                 db "                                        $"
 
-    BOTAO_SELECIONADO db 0             ; 0=BOTAO_INICIAR, 1=BOTAO_SAIR
+    BOTAO_SELECIONADO db 0h             ; 0=BOTAO_INICIAR, 1=BOTAO_SAIR
     BOTAO_INICIAR db 15 dup (" "), 0DAh, 0C4h, 0C4h, 0C4h, 0C4h, 0C4h, 0C4h, 0C4h, 0BFh, 16 dup (" ")
                   db 15 dup (" "), 0B3h, " JOGAR ", 0B3h, 16 dup (" ")
                   db 15 dup (" "), 0C0h, 0C4h, 0C4h, 0C4h, 0C4h, 0C4h, 0C4h, 0C4h, 0D9h, 16 dup (" "), "$"
@@ -650,7 +650,7 @@ DRAW_MENU proc
     
     ;;calcula cor do botao
     mov BL, 0Fh ; branco
-    cmp [BOTAO_SELECIONADO], 1
+    cmp [BOTAO_SELECIONADO], 1h
     jne PULA_LINHA_BOCAO_SAIR
     mov BL, 0Fh ; vermelho
     PULA_LINHA_BOCAO_SAIR:
@@ -738,11 +738,11 @@ INICIO:
     jmp COMECAR_JOGO
 
     NEXT_BTN:
-    push AH
+    push AX
     mov AH, [BOTAO_SELECIONADO]
     xor AH, 1
     call DRAW_MENU
-    pop AH
+    pop AX
     jmp WAIT_MEU
 
     COMECAR_JOGO:
