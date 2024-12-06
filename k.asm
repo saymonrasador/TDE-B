@@ -63,9 +63,15 @@
                 db " |  __/| |-||  | |  |    /| \_/|| |_/\  "
                 db " \_/   \_/ \|  \_/  \_/\_\\____/\____/  "
                 db "                                        $"
-                
-    BOTAO_INICIAR db 'INICIAR$'
-    BOTAO_SAIR db 'SAIR$'
+
+    BOTAO_SELECIONADO db 0             ; 0=BOTAO_INICIAR, 1=BOTAO_SAIR
+    BOTAO_INICIAR db 15 dup (" "), 0DAh, 0C4h, 0C4h, 0C4h, 0C4h, 0C4h, 0C4h, 0C4h, 0BFh, 16 dup (" ")
+                  db 15 dup (" "), 0B3h, " JOGAR ", 0B3h, 16 dup (" ")
+                  db 15 dup (" "), 0C0h, 0C4h, 0C4h, 0C4h, 0C4h, 0C4h, 0C4h, 0C4h, 0D9h, 16 dup (" "), "$"
+
+    BOTAO_SAIR db 15 dup (" "), 0DAh, 0C4h, 0C4h, 0C4h, 0C4h, 0C4h, 0C4h, 0C4h, 0BFh, 16 dup (" ")
+               db 15 dup (" "), 0B3h, " SAIR  ", 0B3h, 16 dup (" ")
+               db 15 dup (" "), 0C0h, 0C4h, 0C4h, 0C4h, 0C4h, 0C4h, 0C4h, 0C4h, 0D9h, 16 dup (" "), "$"
     
 .code
 
@@ -592,44 +598,70 @@ endp
 ; est? no registrador DX
 PRINT_STRING proc
     push AX
+
     mov AH, 09h
     int 21h
+
     pop AX
     ret
 endp
 
-
 DRAW_MENU proc
     push DX
+    push CX
+    push ES
+    mov ax, @DATA
+    mov es, ax
 
-    ;; Escreve o nome do jogo que esta na area de dados
     ;; posiciona cursor e escreve o nome do jogo
     mov BH, 0 ; pagina 0
     MOV DH, 00H ; linha 0
     MOV DL, 01H ; coluna 1
     MOV AH, 02h ; funcao 02h - posicionar cursor
-    INT 10h
+    INT 10h ; chama a interrupcao de video para posicionar o cursor
+
     lea DX, TITULO_JOGO
     call PRINT_STRING
 
     ;; posiciona cursor e escreve o botao de iniciar
     mov BH, 0 ; pagina 0
     MOV DH, 12H ; linha 18
-    MOV DL, 0FH ; coluna 15
-    MOV AH, 02h ; funcao 02h - posicionar cursor
-    INT 10h
-    lea DX, BOTAO_INICIAR
-    call PRINT_STRING
-    
-    ;; posiciona cursor e escreve o botao de iniciar
-    mov BH, 0 ; pagina 0
-    MOV DH, 13H ; linha 19
-    MOV DL, 0FH ; coluna 15
-    MOV AH, 02h ; funcao 02h - posicionar cursor
-    INT 10h
-    lea DX, BOTAO_SAIR
-    call PRINT_STRING
+    MOV DL, 0 ; coluna 15
+    mov AL, 0h
 
+    ;;calcula cor do botao
+    mov BL, 0Fh ; branco
+    cmp [BOTAO_SELECIONADO], 0
+    jne PULA_LINHA_BOCAO_INICIAR
+    mov BL, 0Ch ; vermelho
+    PULA_LINHA_BOCAO_INICIAR:
+
+    mov cx, 78h ; numero de caracteres
+    lea BP, BOTAO_INICIAR
+    mov AH, 13h
+    int 10h
+
+    
+   ;; posiciona cursor e escreve o botao de sair
+    mov BH, 0 ; pagina 0
+    MOV DH, 15H ; linha 21
+    MOV DL, 0 ; coluna 15
+    mov AL, 0h
+    
+    ;;calcula cor do botao
+    mov BL, 0Fh ; branco
+    cmp [BOTAO_SELECIONADO], 1
+    jne PULA_LINHA_BOCAO_SAIR
+    mov BL, 0Fh ; vermelho
+    PULA_LINHA_BOCAO_SAIR:
+
+    mov cx, 78h ; numero de caracteres
+    lea BP, BOTAO_SAIR
+    mov AH, 13h
+    int 10h
+
+    pop ES
+    pop CX
     pop DX
 
 endp
@@ -656,16 +688,15 @@ MOVE_HORIZONTAL proc
     mov DI, BX              ; DI contem a posicao Y atual da nave principal
     add DI, VELOCIDADE_PRINCIPAL
 
-    ;;make DI=DI%320 so that it doesn't go out of bounds
+    ;;faz DI=DI%320 para que nao saia dos limites
     push AX
     push BX
     push DX
-    mov AX, DI       ; Set the current position to AX
-    MOV BX, 300      ; Set the screen width (divisor) to 320
-    XOR DX, DX       ; Clear DX to ensure it starts at zero (for the high part of dividend)
-    DIV BX           ; Divide AX by BX
-                    ; Quotient in AX, remainder in DX
-    MOV DI, DX       ; Move the remainder (wrapped position) into DI
+    mov AX, DI       ; AX = nova posicao
+    MOV BX, 300      ; BX = limite
+    XOR DX, DX 
+    DIV BX           ; AX/BX
+    MOV DI, DX       ; DI = resto da divisao = nova posicao dentro dos limites
     pop DX
     pop BX
     pop AX
@@ -681,7 +712,7 @@ endp
 
 ;------------------- INICIO -------------------
 INICIO:   
-    mov AX,@DATA 
+    mov AX, @DATA 
     mov DS,AX
 
     call SET_VIDEO_MODE
@@ -696,11 +727,25 @@ INICIO:
     mov DX, 4E20h       ; Define o tempo (88B8H = 35.000)
     mov AH, 86h
     int 15h             ; Executa o delay de 35 ms
-    call GET_INPUT
     call MOVE_HORIZONTAL
+    call GET_INPUT
+    cmp AL, 48h
+    je NEXT_BTN
+    cmp AL, 50h
+    je NEXT_BTN
     cmp AL, 'S'
     jne WAIT_MEU
-    
+    jmp COMECAR_JOGO
+
+    NEXT_BTN:
+    push AH
+    mov AH, [BOTAO_SELECIONADO]
+    xor AH, 1
+    call DRAW_MENU
+    pop AH
+    jmp WAIT_MEU
+
+    COMECAR_JOGO:
     ;;reseta posi??po da nave principal
     mov [NAVE_PRINCIPAL_X], 2Fh
     mov [NAVE_PRINCIPAL_Y], 50h
