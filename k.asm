@@ -67,7 +67,7 @@
               db "==++***###******+=+#**##******###******#" 
               db "****************************************$"
 
-    BOTAO_SELECIONADO db 0            ; 0=BOTAO_INICIAR, 1=BOTAO_SAIR
+    BOTAO_SELECIONADO db 1           ; 0=BOTAO_INICIAR, 1=BOTAO_SAIR
     TYPE_NAVE_MENU db 0            ; 0=NAVE_PRINCIPAL, 1=NAVE_ALIENIGENA
     BOTAO_INICIAR db 15 dup (" "), 0DAh, 0C4h, 0C4h, 0C4h, 0C4h, 0C4h, 0C4h, 0C4h, 0BFh, 16 dup (" ")
                   db 15 dup (" "), 0B3h, " JOGAR ", 0B3h, 16 dup (" ")
@@ -611,13 +611,9 @@ PRINT_STRING proc
 endp
 
 DRAW_MENU proc
-    push DX
+    push BX
     push CX
-    push ES
     push AX
-
-    mov ax, @DATA
-    mov es, ax
 
     ;; posiciona cursor e escreve o nome do jogo
     mov BH, 0 ; pagina 0
@@ -629,48 +625,70 @@ DRAW_MENU proc
     lea DX, TITULO_JOGO
     call PRINT_STRING
 
-    ;; posiciona cursor e escreve o botao de iniciar
-    mov BH, 0 ; pagina 0
-    MOV DH, 12H ; linha 18
-    MOV DL, 0 ; coluna 15
-    mov AL, 0h
-
-    ;;calcula cor do botao
-    mov BL, 0Fh ; branco
-    cmp BOTAO_SELECIONADO, 0
-    jne PULA_LINHA_BOCAO_INICIAR
-    mov BL, 0Ch ; vermelho
-    PULA_LINHA_BOCAO_INICIAR:
-
-    mov cx, 78h ; numero de caracteres
-    lea BP, BOTAO_INICIAR
-    mov AH, 13h
-    int 10h
-
-    
-   ;; posiciona cursor e escreve o botao de sair
-    mov BH, 0 ; pagina 0
-    MOV DH, 15H ; linha 21
-    MOV DL, 0 ; coluna 15
-    mov AL, 0h
-    
-    ;;calcula cor do botao
-    mov BL, 0Fh ; branco
-    cmp BOTAO_SELECIONADO, 1
-    jne PULA_LINHA_BOCAO_SAIR
-    mov BL, 0Ch ; vermelho
-    PULA_LINHA_BOCAO_SAIR:
-
-    mov cx, 78h ; numero de caracteres
-    lea BP, BOTAO_SAIR
-    mov AH, 13h
-    int 10h
+    call WRITE_BOTOES_MENU
 
     pop AX
+    pop CX
+    pop BX
+    ret
+endp
+
+WRITE_BOTOES_MENU proc
+    push DX
+    push CX
+    push AX
+    push BX
+    push BP
+    push ES
+
+    ;;configs para ambos botoes
+    mov ax, @DATA
+    mov es, ax
+    mov BH, 0   ; pagina 0
+    mov CX, 78h ; numero de caracteres
+
+    ;----------BTN JOGAR----------------
+    mov BL, 0Fh ; cor do texto (branco)
+    cmp BOTAO_SELECIONADO, 0
+    je SELECT_BOTAO_JOGAR
+    WRITE_BTN_JOGAR:
+    mov AL, 0h  ; modo de cores
+    MOV DL, 0   ; coluna 0
+    MOV DH, 12h ; linha 18
+    lea BP, BOTAO_INICIAR
+    mov AH, 13h           ; define funcao de escrita
+    int 10h               ; chama a interrupcao de video para escrever
+    ;-----------------------------------
+    ;----------BTN SAIR----------------
+    mov BL, 0Fh ; cor do texto (branco)
+    cmp BOTAO_SELECIONADO, 1
+    je SELECT_BOTAO_SAIR
+    WRITE_BTN_SAIR:
+    mov AL, 0h  ; modo de cores
+    MOV DL, 0   ; coluna 0
+    MOV DH, 15h           ; linha 21
+    lea BP, BOTAO_SAIR
+    mov AH, 13h           ;defina funcao de escrita
+    int 10h               ;chama a interrupcao de video para escrever
+    jmp FIM_WRITE_BOTOES_MENU
+    ;-----------------------------------
+
+    SELECT_BOTAO_JOGAR:
+    MOV BL, 0Ch ;; cor vermelha
+    jmp WRITE_BTN_JOGAR
+
+    SELECT_BOTAO_SAIR:
+    MOV BL, 0Ch ;; cor vermelha
+    jmp WRITE_BTN_SAIR
+
+    FIM_WRITE_BOTOES_MENU:
     pop ES
+    pop BP
+    pop BX
+    pop AX
     pop CX
     pop DX
-
+    ret
 endp
 
 
@@ -698,7 +716,7 @@ MOVE_HORIZONTAL proc
     je MOVE_NAVE_PRINCIPAL_MENU
     cmp TYPE_NAVE_MENU, 1
     je MOVE_NAVE_ALIENIGENA_MENU
-    jmp FIM
+    jmp FIM_MOVE_HORIZONTAL
 
  ;-------MOVIMENTO DAS NAVES----------------
     MOVE_NAVE_PRINCIPAL_MENU:
@@ -713,7 +731,7 @@ MOVE_HORIZONTAL proc
     pop DI
     mov [NAVE_PRINCIPAL_X], DI  ; Atualiza posicao da nave e redesenha    
     call DRAW_NAVE_PRINCIPAL
-    jmp FIM
+    jmp FIM_MOVE_HORIZONTAL
 
     MOVE_NAVE_ALIENIGENA_MENU:
     mov BX, [NAVE_ALIENIGENA_X]
@@ -727,7 +745,7 @@ MOVE_HORIZONTAL proc
     pop DI
     mov [NAVE_ALIENIGENA_X], DI  ; Atualiza posicao da nave e redesenha
     call DRAW_NAVE_ALIENIGENA
-    jmp FIM
+    jmp FIM_MOVE_HORIZONTAL
     ;------------------------------------------
 
     ;------TRATAMENTO DE LIMITES--------------
@@ -738,7 +756,7 @@ MOVE_HORIZONTAL proc
     pop DI
     mov [NAVE_ALIENIGENA_X], DI  ; Atualiza posicao da nave e redesenha
     call DRAW_NAVE_ALIENIGENA
-    jmp FIM
+    jmp FIM_MOVE_HORIZONTAL
 
     CHEGOU_LIMITE_ESQUERDA:
     mov TYPE_NAVE_MENU, 0
@@ -747,10 +765,10 @@ MOVE_HORIZONTAL proc
     pop DI
     mov [NAVE_PRINCIPAL_X], DI  ; Atualiza posicao da nave e redesenha
     call DRAW_NAVE_PRINCIPAL
-    jmp FIM
+    jmp FIM_MOVE_HORIZONTAL
     ;------------------------------------------
     
-    FIM:
+    FIM_MOVE_HORIZONTAL:
     pop AX
     pop DI
     pop BX
@@ -764,22 +782,14 @@ DRAW_MAPA proc
 endp
 
 NEXT_BTN proc
-    cmp BOTAO_SELECIONADO, 0
-    je SELECT_BOTAO_SAIR
-    jmp SELECT_BOTAO_JOGAR
+    push AX
 
-    SELECT_BOTAO_JOGAR:
-    mov BOTAO_SELECIONADO, 1
-    call DRAW_MENU
-    ret
-
-    SELECT_BOTAO_SAIR:
-    mov BOTAO_SELECIONADO, 0
-    call DRAW_MENU
+    xor BOTAO_SELECIONADO, 1
+    call WRITE_BOTOES_MENU
+    
+    pop AX
     ret
 endp
-
-
 ;------------------- INICIO -------------------
 INICIO:   
     mov AX, @DATA 
@@ -801,13 +811,18 @@ INICIO:
     int 15h             ; Executa o delay de 35 ms
     call MOVE_HORIZONTAL
     call GET_INPUT
-    cmp AL, 48h ;; tecla para cima
-    je NEXT_BTN
-    cmp AL, 50h ;; tecla para baixo
-    je NEXT_BTN 
+    cmp AL, 'w' ;; tecla para cima
+    je NEXT__BTN
+    cmp AL, 's' ;; tecla para baixo
+    je NEXT__BTN 
     cmp AL, 0Dh ;; tecla enter
     jne WAIT_MEU
     jmp COMECAR_JOGO
+
+    NEXT__BTN: 
+    call NEXT_BTN
+    jmp WAIT_MEU
+
 
     COMECAR_JOGO:
     ;;reseta posi??po da nave principal
