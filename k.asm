@@ -50,6 +50,11 @@
     VELOCIDADE_TIRO dw 6
     VELOCIDADE_DIAGONAL dw 2
     
+    TEMPO_TITULO_SETOR db 4 ;; 4 segundos
+    TEMPO_SETOR db 60 ;; 60 segundos
+    TICKS dw 0 ;;variavel representa o numero de iteracoes do loop principal
+    SETOR_ATUAL db 1 ;;setor atual do jogo
+
     ;;escreve ARCADE GAME na tela
     TITULO_JOGO db "   _  __    ____  _____  ____  ____     " 
                 db "  / |/ /   / ___\/__ __\/  _ \/  __\    "
@@ -63,11 +68,34 @@
                 db " |  __/| |-||  | |  |    /| \_/|| |_/\  "
                 db " \_/   \_/ \|  \_/  \_/\_\\____/\____/  "
                 db "                                        $"
+    setor1   db "               _                 __     "  
+             db "              | |               /  |    "
+             db "    ___   ___ | |_  ___   _ __  `| |    "
+             db "   / __| / _ \| __|/ _ \ | '__|  | |    "
+             db "   \__ \|  __/| |_| (_) || |    _| |_   "
+             db "   |___/ \___| \__|\___/ |_|    \___/   $" 
+    setor2   db "              _                 _____   "
+             db "             | |               / __  \  "
+             db "   ___   ___ | |_  ___   _ __  `' / /'  "
+             db "  / __| / _ \| __|/ _ \ | '__|   / /    "
+             db "  \__ \|  __/| |_| (_) || |    ./ /___  "
+             db "  |___/ \___| \__|\___/ |_|    \_____/  "
+             db "                                        $"
+    setor3   db "              _                 _____   "
+             db "             | |               |____ |  "
+             db "   ___   ___ | |_  ___   _ __      / /  "
+             db "  / __| / _ \| __|/ _ \ | '__|     \ \  "
+             db "  \__ \|  __/| |_| (_) || |    .___/ /  "
+             db "  |___/ \___| \__|\___/ |_|    \____/   "
+             db "                                        $"
+                                    
+                                    
+
     MAPA_JOGO db "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
               db "==++***###******+=+#**##******###******#" 
               db "****************************************$"
 
-    BOTAO_SELECIONADO db 1           ; 0=BOTAO_INICIAR, 1=BOTAO_SAIR
+    BOTAO_SELECIONADO db 0           ; 0=BOTAO_INICIAR, 1=BOTAO_SAIR
     TYPE_NAVE_MENU db 0            ; 0=NAVE_PRINCIPAL, 1=NAVE_ALIENIGENA
     BOTAO_INICIAR db 15 dup (" "), 0DAh, 0C4h, 0C4h, 0C4h, 0C4h, 0C4h, 0C4h, 0C4h, 0BFh, 16 dup (" ")
                   db 15 dup (" "), 0B3h, " JOGAR ", 0B3h, 16 dup (" ")
@@ -776,6 +804,64 @@ MOVE_HORIZONTAL proc
     ret
 endp
 
+DRAW_SETOR proc
+    push BX
+    push DX
+    push AX
+
+    ;; posiciona cursor e escreve o nome do jogo
+    mov BH, 0 ; pagina 0
+    MOV DH, 08H ; linha 0
+    MOV DL, 01H ; coluna 1
+    MOV AH, 02h ; funcao 02h - posicionar cursor
+    INT 10h ; chama a interrupcao de video para posicionar o cursor
+
+    lea DX, setor1
+    call PRINT_STRING
+    
+    pop AX
+    pop DX
+    pop BX
+    ret
+endp
+
+CHECK_FIM_TITULO_SETOR proc
+    ;; OS TEMPOS ENVOLVIDOS NAO PODEM SER MAIORES QUE 65535 ms
+    ;; RETORNO: AX = 0 se o tempo limite foi atingido, AX = 1 caso contrario
+    push CX
+    push DX
+    push AX
+
+    ;; Calcula o tempo decorrido
+    mov ax, TICKS   ;;quantidade de ticks ate o meomento
+    xor DX, DX
+    mov DX, 35
+    mul DX          ;;multiplica por 35ms
+    mov CX, AX      ;; CX = parte baixa  do tempo decorrido em ms
+
+    ;; Calcula tempo limite
+    xor ax, ax
+    mov al, TEMPO_TITULO_SETOR ;; tempo limite em segundos
+    xor DX, DX
+    mov DX, 1000
+    mul DX                   ;; AX = parte alta do tempo limite em ms
+
+    ;;verifica se o tempo limite foi atingido
+    cmp CX, AX ;; compara apenas a parte baixa
+    jge LIMITE_ATINGIDO ; pula se tempo decorrido >= tempo limite
+    mov ax, 1
+    jmp FIM_TITULO_SETOR
+
+    LIMITE_ATINGIDO:
+    mov ax, 0
+
+    FIM_TITULO_SETOR:
+    pop AX
+    pop DX
+    pop CX
+    ret
+endp
+
 DRAW_MAPA proc
     
     ret
@@ -823,8 +909,21 @@ INICIO:
     call NEXT_BTN
     jmp WAIT_MEU
 
-
     COMECAR_JOGO:
+    call SET_VIDEO_MODE
+    call DRAW_SETOR
+    mov TICKS, 0
+    AWAIT_SETOR:
+    ; Intervalo de 35 ms (35000 microssegundos)
+    xor CX, CX          ; Parte superior (16 bits mais significativos)
+    mov DX, 4E20h       ; Define o tempo (88B8H = 35.000)
+    mov AH, 86h
+    int 15h             ; Executa o delay de 35 ms
+    add TICKS, 1
+    call CHECK_FIM_TITULO_SETOR
+    cmp ax, 1
+    je AWAIT_SETOR
+
     ;;reseta posi??po da nave principal
     mov [NAVE_PRINCIPAL_X], 2Fh
     mov [NAVE_PRINCIPAL_Y], 50h
@@ -842,6 +941,7 @@ INICIO:
     mov DX, 4E20h       ; Define o tempo (88B8H = 35.000)
     mov AH, 86h
     int 15h             ; Executa o delay de 35 ms
+    add TICKS, 1
     
     call MOVE_NAVE_PRINCIPAL
     call MOVE_NAVE_ALIENIGENA
