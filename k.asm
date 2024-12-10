@@ -833,21 +833,19 @@ CHECK_FIM_TITULO_SETOR proc
     push AX
 
     ;; Calcula o tempo decorrido
-    mov ax, TICKS   ;;quantidade de ticks ate o meomento
+    mov ax, TICKS   ;; quantidade de ticks ate o momento
     xor DX, DX
     mov DX, 35
-    mul DX          ;;multiplica por 35ms
-    mov CX, AX      ;; CX = parte baixa  do tempo decorrido em ms
+    mul DX          ;; cada tick eh 35 ms -> resultado em DX:AX
+    mov CX, 1000
+    div CX       ;; converte para segundos -> resultado em AX, resto em DX
+    mov CX, AX     ;; CX = tempo decorrido em segundos
 
     ;; Calcula tempo limite
-    xor ax, ax
-    mov al, TEMPO_TITULO_SETOR ;; tempo limite em segundos
-    xor DX, DX
-    mov DX, 1000
-    mul DX                   ;; AX = parte alta do tempo limite em ms
-
+    mov AL, TEMPO_TITULO_SETOR ;; tempo limite em segundos
+ 
     ;;verifica se o tempo limite foi atingido
-    cmp CX, AX ;; compara apenas a parte baixa
+    cmp CL, AL ;; compara apenas a parte baixa
     jge LIMITE_ATINGIDO ; pula se tempo decorrido >= tempo limite
     mov ax, 1
     jmp FIM_TITULO_SETOR
