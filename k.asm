@@ -642,19 +642,23 @@ DRAW_MENU proc
     push BX
     push CX
     push AX
+    push ES
 
-    ;; posiciona cursor e escreve o nome do jogo
-    mov BH, 0 ; pagina 0
-    MOV DH, 00H ; linha 0
-    MOV DL, 01H ; coluna 1
-    MOV AH, 02h ; funcao 02h - posicionar cursor
-    INT 10h ; chama a interrupcao de video para posicionar o cursor
-
-    lea DX, TITULO_JOGO
-    call PRINT_STRING
+    mov ax, @DATA
+    mov es, ax
+    mov BH, 0   ; pagina 0
+    mov CX, 1E0h ; numero de caracteres
+    mov BL, 0Ah ; cor do texto (verde)
+    mov AL, 0h  ; modo de cores
+    MOV DH, 00h ; linha 0
+    MOV DL, 1   ; coluna 1
+    lea BP, TITULO_JOGO
+    mov AH, 13h           ; define funcao de escrita
+    int 10h               ; chama a interrupcao de video para escrever
 
     call WRITE_BOTOES_MENU
 
+    pop ES
     pop AX
     pop CX
     pop BX
@@ -808,25 +812,30 @@ DRAW_SETOR proc
     push BX
     push DX
     push AX
-
-    ;; posiciona cursor e escreve o nome do jogo
-    mov BH, 0 ; pagina 0
-    MOV DH, 08H ; linha 0
-    MOV DL, 01H ; coluna 1
-    MOV AH, 02h ; funcao 02h - posicionar cursor
-    INT 10h ; chama a interrupcao de video para posicionar o cursor
-
-    lea DX, setor1
-    call PRINT_STRING
+    push ES
     
+    mov ax, @DATA
+    mov es, ax
+    mov BH, 0   ; pagina 0
+    mov CX, 0F0h ; numero de caracteres
+    mov BL, 05h ; cor do texto (verde)
+    mov AL, 0h  ; modo de cores
+    MOV DH, 08h ; linha 8
+    MOV DL, 1   ; coluna 1
+    lea BP, setor1
+    mov AH, 13h           ; define funcao de escrita
+    int 10h               ; chama a interrupcao de video para escrever
+
+    pop ES
     pop AX
     pop DX
     pop BX
     ret
 endp
 
-CHECK_FIM_TITULO_SETOR proc
+CHECK_FIM_TICKS proc
     ;; OS TEMPOS ENVOLVIDOS NAO PODEM SER MAIORES QUE 65535 ms
+    ;; PARAMETROS: constante TICKS e DX = tempo limite em segundos
     ;; RETORNO: AX = 0 se o tempo limite foi atingido, AX = 1 caso contrario
     push CX
     push DX
@@ -835,26 +844,25 @@ CHECK_FIM_TITULO_SETOR proc
     ;; Calcula o tempo decorrido
     mov ax, TICKS   ;; quantidade de ticks ate o momento
     xor DX, DX
-    mov DX, 35
-    mul DX          ;; cada tick eh 35 ms -> resultado em DX:AX
-    mov CX, 1000
-    div CX       ;; converte para segundos -> resultado em AX, resto em DX
+    mov DX, 35      ;; cada tick eh 35 ms
+    mul DX          ;; AX*DX -> resultado em DX:AX
+    mov CX, 1000    ;; convertendo para segundos (1s = 1000ms)
+    div CX          ;; AX/CX-> resultado em AX, resto em DX
     mov CX, AX     ;; CX = tempo decorrido em segundos
 
-    ;; Calcula tempo limite
-    mov AL, TEMPO_TITULO_SETOR ;; tempo limite em segundos
+    ;; recupera o tempo limite
+    pop AX
  
     ;;verifica se o tempo limite foi atingido
     cmp CL, AL ;; compara apenas a parte baixa
     jge LIMITE_ATINGIDO ; pula se tempo decorrido >= tempo limite
     mov ax, 1
-    jmp FIM_TITULO_SETOR
+    jmp FIM_CHECK_FIM_TICKS
 
     LIMITE_ATINGIDO:
     mov ax, 0
 
-    FIM_TITULO_SETOR:
-    pop AX
+    FIM_CHECK_FIM_TICKS:
     pop DX
     pop CX
     ret
@@ -918,7 +926,8 @@ INICIO:
     mov AH, 86h
     int 15h             ; Executa o delay de 35 ms
     add TICKS, 1
-    call CHECK_FIM_TITULO_SETOR
+    mov al, TEMPO_TITULO_SETOR
+    call CHECK_FIM_TICKS
     cmp ax, 1
     je AWAIT_SETOR
 
