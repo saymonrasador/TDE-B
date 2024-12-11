@@ -49,11 +49,6 @@
     VELOCIDADE_ALIENIGENA dw 3
     VELOCIDADE_TIRO dw 6
     VELOCIDADE_DIAGONAL dw 2
-    
-    TEMPO_TITULO_SETOR db 4 ;; 4 segundos
-    TEMPO_SETOR db 60 ;; 60 segundos
-    TICKS dw 0 ;;variavel representa o numero de iteracoes do loop principal
-    SETOR_ATUAL db 1 ;;setor atual do jogo
 
     ;;escreve ARCADE GAME na tela
     TITULO_JOGO db "   _  __    ____  _____  ____  ____     " 
@@ -88,8 +83,22 @@
              db "  \__ \|  __/| |_| (_) || |    .___/ /  "
              db "  |___/ \___| \__|\___/ |_|    \____/   "
              db "                                        $"
+    GAME_OVER_TEXT db 18 dup(" "), "GAME", 18 dup(" ")
+                   db 18 dup(" "), "OVER$", 18 dup(" ")
+    VENCEDOR_TEXT db 15 dup(" "), "VENCEDOR!", 16 dup(" "), "$"
                                     
-                                    
+    LABEL_SCORE db "SCORE:$"
+    SCORE_TEXT db 5 dup("0")
+    LABEL_TEMPO_DECORRIDO db "TEMPO:$"
+    TEMPO_DECORRIDO_TEXT db 2 dup("0")
+
+    SCORE dw 0
+    SETOR_ATUAL db 1 ;;setor atual do jogo
+
+    TEMPO_TITULO_SETOR db 4 ;; 4 segundos
+    TEMPO_SETOR db 10 ;; 60 segundos
+    TICKS dw 0 ;;variavel representa o numero de iteracoes do loop principal
+
 
     MAPA_JOGO db "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
               db "==++***###******+=+#**##******###******#" 
@@ -626,18 +635,6 @@ TROCAR_NAVE proc
     ret
 endp
 
-; Escreve uma string terminada por '$' na tela, cujo endere?o
-; est? no registrador DX
-PRINT_STRING proc
-    push AX
-
-    mov AH, 09h
-    int 21h
-
-    pop AX
-    ret
-endp
-
 DRAW_MENU proc
     push BX
     push CX
@@ -808,7 +805,7 @@ MOVE_HORIZONTAL proc
     ret
 endp
 
-DRAW_SETOR proc
+DRAW_TITULO_SETOR proc
     push BX
     push DX
     push AX
@@ -818,14 +815,38 @@ DRAW_SETOR proc
     mov es, ax
     mov BH, 0   ; pagina 0
     mov CX, 0F0h ; numero de caracteres
-    mov BL, 05h ; cor do texto (verde)
     mov AL, 0h  ; modo de cores
     MOV DH, 08h ; linha 8
     MOV DL, 1   ; coluna 1
-    lea BP, setor1
+    
+    ;;DEFINE O SETOR ATUAL
+    cmp SETOR_ATUAL, 2
+    je DEFINE_SETOR2
+    cmp SETOR_ATUAL, 3
+    je DEFINE_SETOR3
+    jmp DEFINE_SETOR1
+
+    ESCREVE_SETOR_TELA:
     mov AH, 13h           ; define funcao de escrita
     int 10h               ; chama a interrupcao de video para escrever
+    jmp FIM_DRAW_SETOR
+    
+    DEFINE_SETOR1:
+    lea BP, setor1
+    mov BL, 09h ; cor do texto (Azul claro)
+    jmp ESCREVE_SETOR_TELA
 
+    DEFINE_SETOR2:
+    lea BP, setor2
+    mov BL, 0Dh ; cor do texto (Magenta claro)
+    jmp ESCREVE_SETOR_TELA
+
+    DEFINE_SETOR3:
+    lea BP, setor3
+    mov BL, 0Ch ; cor do texto (Vermelho claro)
+    jmp ESCREVE_SETOR_TELA
+
+    FIM_DRAW_SETOR:
     pop ES
     pop AX
     pop DX
@@ -835,7 +856,7 @@ endp
 
 CHECK_FIM_TICKS proc
     ;; OS TEMPOS ENVOLVIDOS NAO PODEM SER MAIORES QUE 65535 ms
-    ;; PARAMETROS: constante TICKS e DX = tempo limite em segundos
+    ;; PARAMETROS: constante TICKS e AL = tempo limite em segundos
     ;; RETORNO: AX = 0 se o tempo limite foi atingido, AX = 1 caso contrario
     push CX
     push DX
@@ -851,6 +872,7 @@ CHECK_FIM_TICKS proc
     mov CX, AX     ;; CX = tempo decorrido em segundos
 
     ;; recupera o tempo limite
+    xor ax, ax
     pop AX
  
     ;;verifica se o tempo limite foi atingido
@@ -865,6 +887,90 @@ CHECK_FIM_TICKS proc
     FIM_CHECK_FIM_TICKS:
     pop DX
     pop CX
+    ret
+endp
+
+DRAW_STATUS_BAR proc
+   push BX
+    push DX
+    push AX
+    push ES
+
+    mov ax, @DATA
+    mov es, ax
+    mov BH, 0   ; pagina 0
+
+    ;-----------SCORE------------------
+    mov BL, 0Fh  ; cor do texto (branco)
+    mov AL, 0h   ; modo de cores
+    MOV DH, 00h  ; linha 0
+    MOV DL, 00h  ; coluna 0
+    lea BP, LABEL_SCORE
+    mov CX, 06h ; numero de caracteres
+    mov AH, 13h           ; define funcao de escrita
+    int 10h               ; chama a interrupcao de video para escrever
+
+    mov BL, 02h  ; cor do texto (verde)
+    mov AL, 0h   ; modo de cores
+    MOV DH, 00h  ; linha 0
+    MOV DL, 07h  ; coluna 8
+    lea BP, SCORE_TEXT
+    mov CX, 05h ; numero de caracteres
+    mov AH, 13h           ; define funcao de escrita
+    int 10h               ; chama a interrupcao de video para escrever
+
+    ;----------TEMPO------------------
+    mov BL, 0Fh  ; cor do texto (branco)
+    mov AL, 0h   ; modo de cores
+    MOV DH, 00h  ; linha 0
+    MOV DL, 31  ; coluna 0
+    lea BP, LABEL_TEMPO_DECORRIDO
+    mov CX, 06h ; numero de caracteres
+    mov AH, 13h           ; define funcao de escrita
+    int 10h               ; chama a interrupcao de video para escrever
+
+    mov BL, 02h  ; cor do texto (verde)
+    mov AL, 0h   ; modo de cores
+    MOV DH, 00h  ; linha 0
+    MOV DL, 38  ; coluna 8
+    lea BP, TEMPO_DECORRIDO_TEXT
+    mov CX, 02h ; numero de caracteres
+    mov AH, 13h           ; define funcao de escrita
+    int 10h               ; chama a interrupcao de video para escrever
+
+    pop ES
+    pop AX
+    pop DX
+    pop BX
+    ret
+endp
+
+DRAW_GAME_OVER proc
+    push BX
+    push DX
+    push AX
+    push ES
+
+    call SET_VIDEO_MODE
+
+    mov ax, @DATA
+    mov es, ax
+    mov BH, 0   ; pagina 0
+
+    mov BL, 0Ah  ; cor do texto (verde claro)
+    mov AL, 0h   ; modo de cores
+    MOV DH, 08h  ; linha 0
+    MOV DL, 00h  ; coluna 0
+    lea BP, VENCEDOR_TEXT
+    mov CX, 28h ; numero de caracteres
+    mov AH, 13h           ; define funcao de escrita
+    int 10h               ; chama a interrupcao de video para escrever
+
+
+    pop ES
+    pop AX
+    pop DX
+    pop BX
     ret
 endp
 
@@ -887,6 +993,8 @@ INICIO:
     mov AX, @DATA 
     mov DS,AX
 
+    ;------------TELA MENU----------------
+    MENU:
     call SET_VIDEO_MODE
     call DRAW_MENU
 
@@ -910,14 +1018,25 @@ INICIO:
     cmp AL, 0Dh ;; tecla enter
     jne WAIT_MEU
     jmp COMECAR_JOGO
+    ;-------------------------------------
 
+    ;;--------------JUMPS GAMBIARRA----------------
     NEXT__BTN: 
     call NEXT_BTN
     jmp WAIT_MEU
 
+    GAME_OVER:
+    call DRAW_GAME_OVER
+    LOOP_GAME_OVER:
+    call GET_INPUT
+    cmp AL, 'r'
+    je MENU
+    jmp LOOP_GAME_OVER
+
+    ;-----------TELA TITULO SETOR----------------
     COMECAR_JOGO:
     call SET_VIDEO_MODE
-    call DRAW_SETOR
+    call DRAW_TITULO_SETOR
     mov TICKS, 0
     AWAIT_SETOR:
     ; Intervalo de 35 ms (35000 microssegundos)
@@ -930,7 +1049,9 @@ INICIO:
     call CHECK_FIM_TICKS
     cmp ax, 1
     je AWAIT_SETOR
+    ;-------------------------------------
 
+    ;-----------TELA JOGO----------------
     ;;reseta posi??po da nave principal
     mov [NAVE_PRINCIPAL_X], 2Fh
     mov [NAVE_PRINCIPAL_Y], 50h
@@ -955,7 +1076,16 @@ INICIO:
     call MOVE_TIRO
     call CHECK_COLISAO_8_NAVES
     call CHECK_COLISAO_NAVE_PRINCIPAL
-
-    jmp MAIN_LOOP        
+    call DRAW_STATUS_BAR
+    
+    mov al, TEMPO_SETOR
+    call CHECK_FIM_TICKS
+    cmp ax, 1
+    je MAIN_LOOP
+    add SETOR_ATUAL, 1
+    cmp SETOR_ATUAL, 4
+    jne COMECAR_JOGO
+    jmp GAME_OVER
+    ;-------------------------------------
 
 end INICIO
