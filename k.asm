@@ -945,6 +945,42 @@ DRAW_STATUS_BAR proc
     ret
 endp
 
+REFRESH_TEMPO_DECORRIDO proc
+    ;;Essa função é responsável por atualizar a variável TEMPO_DECORRIDO_TEXT
+    push CX
+    push DX
+    push AX
+    push DI
+
+    ;;1. converter TICKS para tempo decorrido em segundos
+    mov ax, TICKS   ;; quantidade de ticks ate o momento
+    xor DX, DX
+    mov DX, 35      ;; cada tick eh 35 ms
+    mul DX          ;; AX*DX -> resultado em DX:AX
+    mov CX, 1000    ;; convertendo para segundos (1s = 1000ms)
+    div CX          ;; AX/CX-> resultado em AX, resto em DX
+
+    ;;2. converter os segundos em caracteres ASCII
+    xor CL, CL
+    xor AH, AH
+    mov CL, 10
+    div CL ;;AL=AL/10,AH=AL%10
+    add AX, '0' ;;unidade
+    add AH, '0' ;;dezena
+
+    ;;3. atualizar a variável TEMPO_DECORRIDO_TEXT
+    cld
+    mov DI, offset TEMPO_DECORRIDO_TEXT
+    mov [DI], AH
+    mov [DI+1], AL
+
+    pop DI
+    pop AX
+    pop DX
+    pop CX
+    ret
+endp
+
 DRAW_GAME_OVER proc
     push BX
     push DX
