@@ -96,7 +96,7 @@
     SETOR_ATUAL db 1 ;;setor atual do jogo
 
     TEMPO_TITULO_SETOR db 4 ;; 4 segundos
-    TEMPO_SETOR db 10 ;; 60 segundos
+    TEMPO_SETOR db 30 ;; 60 segundos
     TICKS dw 0 ;;variavel representa o numero de iteracoes do loop principal
 
 
@@ -946,7 +946,7 @@ DRAW_STATUS_BAR proc
 endp
 
 REFRESH_TEMPO_DECORRIDO proc
-    ;;Essa função é responsável por atualizar a variável TEMPO_DECORRIDO_TEXT
+    ;;Essa fun??o ? respons?vel por atualizar a vari?vel TEMPO_DECORRIDO_TEXT
     push CX
     push DX
     push AX
@@ -965,14 +965,14 @@ REFRESH_TEMPO_DECORRIDO proc
     xor AH, AH
     mov CL, 10
     div CL ;;AL=AL/10,AH=AL%10
-    add AX, '0' ;;unidade
+    add AL, '0' ;;unidade
     add AH, '0' ;;dezena
 
-    ;;3. atualizar a variável TEMPO_DECORRIDO_TEXT
+    ;;3. atualizar a variavel TEMPO_DECORRIDO_TEXT
     cld
     mov DI, offset TEMPO_DECORRIDO_TEXT
-    mov [DI], AH
-    mov [DI+1], AL
+    mov [DI], AL
+    mov [DI+1], AH
 
     pop DI
     pop AX
@@ -1012,6 +1012,19 @@ endp
 
 DRAW_MAPA proc
     
+    ret
+endp
+
+SETUP_TELA_JOGO proc
+    mov [NAVE_PRINCIPAL_X], 2Fh
+    mov [NAVE_PRINCIPAL_Y], 50h
+    mov [NAVE_ALIENIGENA_X], 12Ch
+    mov [NAVE_ALIENIGENA_Y], 50h
+    mov TICKS, 0
+    call SET_VIDEO_MODE
+    call DRAW_8_NAVES
+    call DRAW_NAVE_PRINCIPAL
+    call DRAW_MAPA
     ret
 endp
 
@@ -1085,20 +1098,9 @@ INICIO:
     call CHECK_FIM_TICKS
     cmp ax, 1
     je AWAIT_SETOR
-    ;-------------------------------------
-
     ;-----------TELA JOGO----------------
-    ;;reseta posi??po da nave principal
-    mov [NAVE_PRINCIPAL_X], 2Fh
-    mov [NAVE_PRINCIPAL_Y], 50h
-    mov [NAVE_ALIENIGENA_X], 12Ch
-    mov [NAVE_ALIENIGENA_Y], 50h
-
-    call SET_VIDEO_MODE
-    call DRAW_8_NAVES
-    call DRAW_NAVE_PRINCIPAL
-    call DRAW_MAPA
-    
+    ;;reseta posicao da nave principal
+    call SETUP_TELA_JOGO
     MAIN_LOOP:
     ; Intervalo de 35 ms (35000 microssegundos)
     xor CX, CX          ; Parte superior (16 bits mais significativos)
@@ -1106,6 +1108,7 @@ INICIO:
     mov AH, 86h
     int 15h             ; Executa o delay de 35 ms
     add TICKS, 1
+    call REFRESH_TEMPO_DECORRIDO
     
     call MOVE_NAVE_PRINCIPAL
     call MOVE_NAVE_ALIENIGENA
