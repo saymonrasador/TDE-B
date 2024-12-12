@@ -1133,7 +1133,26 @@ DRAW_GAME_OVER proc
 endp
 
 DRAW_MAPA proc
-    
+    ;;Move o desenho MAPA_JOGO para o buffer de video
+    push ES
+    push AX
+    push CX
+
+    mov ES, VIDEO_SEGMENT
+    ;DI=offset do destino => Linha 179, Coluna 0 => 320X180=57600
+    mov DI, 0e100h
+    ;SI=offset da origem => MAPA_JOGO
+    lea SI, MAPA_JOGO
+    ;CX=numero de bytes a serem copiados => 320*20=6400
+    mov CX, 1900h
+
+    cld
+    ;;Copia os bytes de MAPA_JOGO para o buffer de video
+    rep movsb ;;DS:SI => ES:DI
+
+    pop CX
+    pop AX    
+    pop ES
     ret
 endp
 
@@ -1267,6 +1286,7 @@ INICIO:
     END_GAME:
     call DRAW_END_GAME
     mov SETOR_ATUAL, 1
+    mov SCORE, 0
     LOOP_END_GAME:
     call GET_INPUT
     cmp AL, 'r'
@@ -1276,6 +1296,7 @@ INICIO:
     GAME_OVER:
     call DRAW_GAME_OVER
     mov SETOR_ATUAL, 1
+    mov SCORE, 0
     LOOP_GAME_OVER:
     call GET_INPUT
     cmp AL, 'r'
