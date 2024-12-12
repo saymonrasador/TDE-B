@@ -104,9 +104,26 @@
     TICKS dw 0 ;;variavel representa o numero de iteracoes do loop principal
 
 
-    MAPA_JOGO db "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-              db "==++***###******+=+#**##******###******#" 
-              db "****************************************$"
+    MAPA_JOGO db 79 dup(0H), 2 dup(06H), 81 dup(0H), 06H, 142 dup(0H), 2 dup(06H), 13 dup(0H)
+              db 77 dup(0H), 6 dup(06H), 78 dup(0H), 3 dup(06H), 140 dup(0H), 4 dup(06H), 12 dup(0H)
+              db 75 dup(0H), 10 dup(06H), 75 dup(0H), 4 dup(06H), 33 dup(0H), 2 dup(06H), 72 dup(0H), 8 dup(06H), 24 dup(0H), 6 dup(06H), 12 dup(0H)
+              db 33 dup(0H), 2 dup(06H), 38 dup(0H), 14 dup(06H), 72 dup(0H), 6 dup(06H), 30 dup(0H), 6 dup(06H), 70 dup(0H), 9 dup(06H), 22 dup(0H), 8 dup(06H), 11 dup(0H)
+              db 31 dup(0H), 6 dup(06H), 34 dup(0H), 18 dup(06H), 69 dup(0H), 7 dup(06H), 30 dup(0H), 7 dup(06H), 68 dup(0H), 11 dup(06H), 21 dup(0H), 9 dup(06H), 10 dup(0H)
+              db 29 dup(0H), 10 dup(06H), 32 dup(0H), 19 dup(06H), 67 dup(0H), 9 dup(06H), 27 dup(0H), 10 dup(06H), 66 dup(0H), 12 dup(06H), 20 dup(0H), 11 dup(06H), 9 dup(0H)
+              db 27 dup(0H), 14 dup(06H), 29 dup(0H), 20 dup(06H), 66 dup(0H), 15 dup(06H), 20 dup(0H), 13 dup(06H), 65 dup(0H), 13 dup(06H), 18 dup(0H), 12 dup(06H), 9 dup(0H)
+              db 25 dup(0BH), 18 dup(06H), 25 dup(0BH), 23 dup(06H), 64 dup(0BH), 54 dup(06H), 58 dup(0BH), 47 dup(06H), 7 dup(0BH)
+              db 18 dup(0BH), 29 dup(06H), 20 dup(0BH), 27 dup(06H), 60 dup(0BH), 57 dup(06H), 54 dup(0BH), 51 dup(06H), 5 dup(0BH) 
+              db 16 dup(0BH), 126 dup(06H), 11 dup(0BH), 59 dup(06H), 52 dup(0BH), 53 dup(06H), 4 dup(0BH)
+              db 15 dup(0BH), 129 dup(06H), 7 dup(0BH), 62 dup(06H), 50 dup(0BH), 55 dup(06H), 3 dup(0BH)   
+              db 480 dup(06H)
+              db 480 dup(06H)
+              db 480 dup(06H)
+              db 480 dup(06H)
+              db 480 dup(06H)
+              db 480 dup(06H)
+              db 480 dup(06H)
+              db 480 dup(06H)
+              db 480 dup(06H)
 
     BOTAO_SELECIONADO db 0           ; 0=BOTAO_INICIAR, 1=BOTAO_SAIR
     TYPE_NAVE_MENU db 0            ; 0=NAVE_PRINCIPAL, 1=NAVE_ALIENIGENA
