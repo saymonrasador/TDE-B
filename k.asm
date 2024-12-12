@@ -100,7 +100,7 @@
     ALIENS_FUGIRAM db 0 ;;contador de aliens que fugiram
 
     TEMPO_TITULO_SETOR db 4 ;; 4 segundos
-    TEMPO_SETOR db 20 ;; 60 segundos
+    TEMPO_SETOR db 15 ;; 60 segundos
     TICKS dw 0 ;;variavel representa o numero de iteracoes do loop principal
 
 
@@ -265,6 +265,25 @@ endp
 
 ;------------------- MOVER -------------------
 
+MOVE_NAVE_ALIENIGENA proc
+    mov DX, [NAVE_ALIENIGENA_Y]
+    mov BX, [NAVE_ALIENIGENA_X]
+    mov CL, 2       ; Tipo de desenho
+    
+    cmp BX, 1           ; Checa se ja chegou na posicao zero
+    jge NAO_REINICIA    ; Salta se BX maior ou igual a 0 
+    inc ALIENS_FUGIRAM  ; Incrementa o contador de aliens que fugiram
+    call APAGAR_NAVE  
+    mov BX, 12Ch        ; Reinicia a posicao da nave alienigena
+    mov [NAVE_ALIENIGENA_X], BX
+    
+    NAO_REINICIA:
+    call MOVE_UP        ; Continua o movimento continuo
+    
+    FIM_ALIENIGENA:
+    ret
+endp
+
 MOVE_NAVE_PRINCIPAL proc
     mov DX, [NAVE_PRINCIPAL_Y]
     mov BX, [NAVE_PRINCIPAL_X]
@@ -292,26 +311,6 @@ MOVE_NAVE_PRINCIPAL proc
     mov [TIRO_X], BX
     ret
 endp
-
-
-MOVE_NAVE_ALIENIGENA proc
-    mov DX, [NAVE_ALIENIGENA_Y]
-    mov BX, [NAVE_ALIENIGENA_X]
-    mov CL, 2       ; Tipo de desenho
-    
-    cmp BX, 1           ; Checa se ja chegou na posicao zero
-    jge NAO_REINICIA    ; Salta se BX maior ou igual a 0 
-    call APAGAR_NAVE  
-    mov BX, 12Ch        ; Reinicia a posicao da nave alienigena
-    mov [NAVE_ALIENIGENA_X], BX
-    
-    NAO_REINICIA:
-    call MOVE_UP        ; Continua o movimento continuo
-    
-    FIM_ALIENIGENA:
-    ret
-endp
-
 
 ; BX=posicao X / DX=posicao Y 
 MOVE_UP proc
@@ -479,7 +478,7 @@ GERAR_POSICAO_ALEATORIA proc
     ; Usar DX para obter um valor aleatorio entre 20 e 80
     mov AX, DX       
     xor DX, DX          ; Zera DX para a divisao
-    mov CX, 61          ; Divisor para limitar o valor de AX para 0-60
+    mov CX, 78h          ; Divisor para limitar o valor de AX para 0-60
     div CX              ; Divide AX por 61 (resto em DX)
     add DX, 40          ; Ajuste para posicao 20-80  
     mov [NAVE_ALIENIGENA_Y], DX
@@ -1194,22 +1193,25 @@ SETUP_TITULO_SETOR proc
     ADD_SCORE:
     add SCORE, AX
     ;2.pontos onus por naves que fugiram
-    ;xor AX, AX
-    ;mov AL, 10
-    ;cmp SETOR_ATUAL, 2
-    ;je ONUS_SET2
-    ;cmp SETOR_ATUAL, 3
-    ;je ONUS_SET3
-    ;ONUS_SET2:
-    ;mov BL, 2
-    ;mul BL
-    ;jmp SUB_SCORE
-    ;ONUS_SET3:
-    ;mov BL, 3
-    ;mul BL
-    ;jmp SUB_SCORE
-    ;SUB_SCORE:
-    ;sub SCORE, AX
+    xor AX, AX
+    mov AL, 10
+    cmp CH, 2 ;; SETOR_ATUAL = 2 ?
+    je ONUS_SET2
+    cmp CH, 3 ;; SETOR_ATUAL = 3 ?
+    je ONUS_SET3
+    ONUS_SET2:
+    mov BL, 2
+    mul BL
+    jmp SUB_SCORE
+    ONUS_SET3:
+    mov BL, 3
+    mul BL
+    jmp SUB_SCORE
+    SUB_SCORE:
+    xor CX, CX
+    mov cl, ALIENS_FUGIRAM
+    mul CX ;; DX:AX = AX * CX
+    sub SCORE, AX
 
     FIM_SETUP_SETOR:
     ;;;---RESET de variaveis---
