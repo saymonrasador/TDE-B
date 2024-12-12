@@ -84,21 +84,23 @@
              db "  |___/ \___| \__|\___/ |_|    \____/   "
              db "                                        $"
     GAME_OVER_TEXT db 18 dup(" "), "GAME", 18 dup(" ")
-                   db 18 dup(" "), "OVER$", 18 dup(" ")
+                   db 18 dup(" "), "OVER", 18 dup(" "), "$"
     VENCEDOR_TEXT db 15 dup(" "), "VENCEDOR!", 16 dup(" "), "$"
                                     
     LABEL_SCORE db "SCORE:$"
     SCORE_TEXT db 5 dup("0")
     LABEL_TEMPO_DECORRIDO db "TEMPO:$"
     TEMPO_DECORRIDO_TEXT db 2 dup("0")
+    SAIR_MENU_TEXT db "APERTE 'r' para voltar ao menu$"
 
-    SCORE dw 0
+    SCORE dw 0h
     SETOR_ATUAL db 1 ;;setor atual do jogo
+    NAVES_RESTANTES db 8 ;;numero de naves restantes no setor vigente
     NAVES_DESTRUIDAS db 0 ;;contador de naves destruidas no setor vigente
     ALIENS_FUGIRAM db 0 ;;contador de aliens que fugiram
 
     TEMPO_TITULO_SETOR db 4 ;; 4 segundos
-    TEMPO_SETOR db 30 ;; 60 segundos
+    TEMPO_SETOR db 20 ;; 60 segundos
     TICKS dw 0 ;;variavel representa o numero de iteracoes do loop principal
 
 
@@ -594,7 +596,7 @@ endp
 
 
 ;------------------- TROCAR -------------------
-
+;quando a anve aliada ? atingida ela deve trocar de lugar com uma das naves fixas
 TROCAR_NAVE proc
     mov CX, 8               ; Contador para as 8 naves
     mov DX, NAVE_Y_START    ; Posicao Y inicial das naves fixas
@@ -631,7 +633,8 @@ TROCAR_NAVE proc
     div CX            
     mov BX, 0
     mov DX, AX
-    call APAGAR_NAVE
+    dec NAVES_RESTANTES ; Decrementa o numero de naves restantes
+    call APAGAR_NAVE ;;apaga uma das 8 naves de vida
     
     pop AX
     mov [COR_NAVE_PRINCIPAL], AL
@@ -870,7 +873,7 @@ CHECK_FIM_TICKS proc
     ;; Calcula o tempo decorrido
     mov ax, TICKS   ;; quantidade de ticks ate o momento
     xor DX, DX
-    mov DX, 35      ;; cada tick eh 35 ms
+    mov DX, 20      ;; cada tick eh 20 ms
     mul DX          ;; AX*DX -> resultado em DX:AX
     mov CX, 1000    ;; convertendo para segundos (1s = 1000ms)
     div CX          ;; AX/CX-> resultado em AX, resto em DX
@@ -960,7 +963,7 @@ REFRESH_TEMPO_DECORRIDO proc
     ;;1. converter TICKS para tempo decorrido em segundos
     mov ax, TICKS   ;; quantidade de ticks ate o momento
     xor DX, DX
-    mov DX, 35      ;; cada tick eh 35 ms
+    mov DX, 20      ;; cada tick eh 20 ms
     mul DX          ;; AX*DX -> resultado em DX:AX
     mov CX, 1000    ;; convertendo para segundos (1s = 1000ms)
     div CX          ;; DX:AX/CX-> resultado em AX, resto em DX
@@ -970,8 +973,8 @@ REFRESH_TEMPO_DECORRIDO proc
     xor AH, AH
     mov CL, 10
     div CL ;;AL=AL/10,AH=AL%10
-    add AL, '0' ;; Unidade
-    add AH, '0' ;; Dezena
+    add AL, '0' ;; Dezena
+    add AH, '0' ;; Unidade
 
     ;;3. atualizar a variavel TEMPO_DECORRIDO_TEXT
     cld
@@ -993,20 +996,22 @@ REFRESH_SCORE proc
     push AX
     push DI
 
-    ;;converte SCORE para caracteres ASCII e já armazenar em SCORE_TEXT
+    ;;converte SCORE para caracteres ASCII e ja armazenar em SCORE_TEXT
     xor ax, ax
     mov ax, SCORE
-    mov cx, 10
+    mov BX, 10
+    cld
     mov di, offset SCORE_TEXT
-
+    add di, 4
+    mov cx, 5
+    
     LOOP_CONVERT_SCORE:
-    xor dx, dx
-    div cx
-    add dl, '0'
-    mov [di], dl
-    inc di
-    cmp ax, ax
-    jne LOOP_CONVERT_SCORE
+    xor DX, DX
+    div BX ; AX=AX/BX, DX=AX%BX
+    add DL, '0'
+    mov [DI], DL
+    dec DI
+    loop LOOP_CONVERT_SCORE
 
     pop DI
     pop AX
@@ -1015,7 +1020,7 @@ REFRESH_SCORE proc
     ret
 endp 
 
-DRAW_GAME_OVER proc
+DRAW_END_GAME proc
     push BX
     push DX
     push AX
@@ -1037,6 +1042,72 @@ DRAW_GAME_OVER proc
     int 10h               ; chama a interrupcao de video para escrever
 
 
+    
+    mov BL, 0Fh  ; cor do texto (verde branco)
+    mov AL, 0h   ; modo de cores
+    MOV DH, 12h  ; linha 0
+    MOV DL, 14  ; coluna 0
+    lea BP, LABEL_SCORE
+    mov CX, 6h ; numero de caracteres
+    mov AH, 13h           ; define funcao de escrita
+    int 10h               ; chama a interrupcao de video para escrever
+
+    mov BL, 0Fh  ; cor do texto (verde branco)
+    mov AL, 0h   ; modo de cores
+    MOV DH, 12h  ; linha 0
+    MOV DL, 14h  ; coluna 0
+    lea BP, SCORE_TEXT
+    mov CX, 5h ; numero de caracteres
+    mov AH, 13h           ; define funcao de escrita
+    int 10h               ; chama a interrupcao de video para escrever
+
+
+    mov BL, 0Fh  ; cor do texto (verde branco)
+    mov AL, 0h   ; modo de cores
+    MOV DH, 18h  ; linha 0
+    MOV DL, 5h  ; coluna 0
+    lea BP, SAIR_MENU_TEXT
+    mov CX, 1eh ; numero de caracteres
+    mov AH, 13h           ; define funcao de escrita
+    int 10h               ; chama a interrupcao de video para escrever
+
+    pop ES
+    pop AX
+    pop DX
+    pop BX
+    ret
+endp
+
+DRAW_GAME_OVER proc
+    push BX
+    push DX
+    push AX
+    push ES
+
+    call SET_VIDEO_MODE
+
+    mov ax, @DATA
+    mov es, ax
+    mov BH, 0   ; pagina 0
+
+    mov BL, 0Ch  ; cor do texto (vermelho claro)
+    mov AL, 0h   ; modo de cores
+    MOV DH, 08h  ; linha 0
+    MOV DL, 00h  ; coluna 0
+    lea BP, GAME_OVER_TEXT
+    mov CX, 50h ; numero de caracteres
+    mov AH, 13h           ; define funcao de escrita
+    int 10h               ; chama a interrupcao de video para escrever
+    
+    mov BL, 0Fh  ; cor do texto (verde branco)
+    mov AL, 0h   ; modo de cores
+    MOV DH, 18h  ; linha 0
+    MOV DL, 5h  ; coluna 0
+    lea BP, SAIR_MENU_TEXT
+    mov CX, 1eh ; numero de caracteres
+    mov AH, 13h           ; define funcao de escrita
+    int 10h               ; chama a interrupcao de video para escrever
+
     pop ES
     pop AX
     pop DX
@@ -1054,54 +1125,69 @@ SETUP_TITULO_SETOR proc
 
     push AX
     push BX
+    push CX
 
     ;------PINTA TELA DE FUNDO------
     call SET_VIDEO_MODE
     call DRAW_TITULO_SETOR
     
     ;------ATUALIZA SCORE------
-    ;1.pontos bonus por nave destruida no setor
-    mov AL, NAVES_DESTRUIDAS
+    mov CH, SETOR_ATUAL
+    dec CH
+    cmp CH, 0 
+    je FIM_SETUP_SETOR
+    ;1.pontos bonus por nave remanescente
+    mov AL, NAVES_RESTANTES
+    xor BX, BX
     mov BX, 1000
     mul BX
-    cmp SETOR_ATUAL, 2
+    cmp CH, 2 ;; SETOR_ATUAL = 2 ?
     je BONUS_SET2
-    cmp SETOR_ATUAL, 3
+    cmp CH, 3 ;; SETOR_ATUAL = 3 ?
     je BONUS_SET3
     BONUS_SET2:
-    mul 2
+    xor BX, BX
+    mov BX, 2
+    mul BX
     jmp ADD_SCORE
     BONUS_SET3:
-    mul 0
+    xor BX, BX
+    mov BX, 0
+    mul BX
     jmp ADD_SCORE
     ADD_SCORE:
     add SCORE, AX
     ;2.pontos onus por naves que fugiram
-    xor AX, AX
-    mov AL, 10
-    cmp SETOR_ATUAL, 2
-    je ONUS_SET2
-    cmp SETOR_ATUAL, 3
-    je ONUS_SET3
-    ONUS_SET2:
-    mul 2
-    jmp SUB_SCORE
-    ONUS_SET3:
-    mul 3
-    jmp SUB_SCORE
-    SUB_SCORE:
-    sub SCORE, AX
+    ;xor AX, AX
+    ;mov AL, 10
+    ;cmp SETOR_ATUAL, 2
+    ;je ONUS_SET2
+    ;cmp SETOR_ATUAL, 3
+    ;je ONUS_SET3
+    ;ONUS_SET2:
+    ;mov BL, 2
+    ;mul BL
+    ;jmp SUB_SCORE
+    ;ONUS_SET3:
+    ;mov BL, 3
+    ;mul BL
+    ;jmp SUB_SCORE
+    ;SUB_SCORE:
+    ;sub SCORE, AX
 
-
-    ;---RESET de variaveis---
+    FIM_SETUP_SETOR:
+    ;;;---RESET de variaveis---
     mov TICKS, 0
     mov NAVES_DESTRUIDAS, 0
     mov ALIENS_FUGIRAM, 0
+    mov NAVES_RESTANTES, 8
 
+    pop CX
     pop BX
     pop AX
     ret
 endp
+
 SETUP_TELA_JOGO proc
     mov [NAVE_PRINCIPAL_X], 2Fh
     mov [NAVE_PRINCIPAL_Y], 50h
@@ -1161,8 +1247,18 @@ INICIO:
     call NEXT_BTN
     jmp WAIT_MEU
 
+    END_GAME:
+    call DRAW_END_GAME
+    mov SETOR_ATUAL, 1
+    LOOP_END_GAME:
+    call GET_INPUT
+    cmp AL, 'r'
+    je MENU
+    jmp LOOP_END_GAME
+
     GAME_OVER:
     call DRAW_GAME_OVER
+    mov SETOR_ATUAL, 1
     LOOP_GAME_OVER:
     call GET_INPUT
     cmp AL, 'r'
@@ -1171,6 +1267,8 @@ INICIO:
 
     ;-----------TELA TITULO SETOR----------------
     COMECAR_JOGO:
+    cmp SETOR_ATUAL, 4
+    je END_GAME
     call SETUP_TITULO_SETOR
     AWAIT_SETOR:
     ; Intervalo de 35 ms (35000 microssegundos)
@@ -1194,23 +1292,27 @@ INICIO:
     int 15h             ; Executa o delay de 35 ms
     add TICKS, 1
     call REFRESH_TEMPO_DECORRIDO
-    call REFRESH_SCORE
     
     call MOVE_NAVE_PRINCIPAL
     call MOVE_NAVE_ALIENIGENA
     call MOVE_TIRO
     call CHECK_COLISAO_8_NAVES
     call CHECK_COLISAO_NAVE_PRINCIPAL
+
+    call REFRESH_SCORE
     call DRAW_STATUS_BAR
     
+    ;;---Verifica se o jogador perdeu todas as vidas---
+    cmp NAVES_RESTANTES, 0
+    je GAME_OVER
+    
+    ;;---Verifica se o tempo do setor acabou---
     mov al, TEMPO_SETOR
     call CHECK_FIM_TICKS
     cmp ax, 1
     je MAIN_LOOP
     add SETOR_ATUAL, 1
-    cmp SETOR_ATUAL, 4
-    jne COMECAR_JOGO
-    jmp GAME_OVER
+    jmp COMECAR_JOGO
     ;-------------------------------------
 
 end INICIO
