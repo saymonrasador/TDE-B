@@ -94,6 +94,8 @@
 
     SCORE dw 0
     SETOR_ATUAL db 1 ;;setor atual do jogo
+    NAVES_DESTRUIDAS db 0 ;;contador de naves destruidas no setor vigente
+    ALIENS_FUGIRAM db 0 ;;contador de aliens que fugiram
 
     TEMPO_TITULO_SETOR db 4 ;; 4 segundos
     TEMPO_SETOR db 30 ;; 60 segundos
@@ -501,7 +503,10 @@ CHECK_COLISAO_TIRO proc
     mov TIRO_ATIVO, 0              ; Desativa o tiro
     mov BX, [NAVE_ALIENIGENA_X]
     mov DX, [NAVE_ALIENIGENA_Y]
-    call APAGAR_NAVE               
+    call APAGAR_NAVE    
+    ;;--------ATUALIZA SCORE ----------------------
+    add SCORE, 100
+    add NAVES_DESTRUIDAS, 1           
 
     call GERAR_POSICAO_ALEATORIA
     FIM_COLISAO:
@@ -958,15 +963,15 @@ REFRESH_TEMPO_DECORRIDO proc
     mov DX, 35      ;; cada tick eh 35 ms
     mul DX          ;; AX*DX -> resultado em DX:AX
     mov CX, 1000    ;; convertendo para segundos (1s = 1000ms)
-    div CX          ;; AX/CX-> resultado em AX, resto em DX
+    div CX          ;; DX:AX/CX-> resultado em AX, resto em DX
 
     ;;2. converter os segundos em caracteres ASCII
     xor CL, CL
     xor AH, AH
     mov CL, 10
     div CL ;;AL=AL/10,AH=AL%10
-    add AL, '0' ;;unidade
-    add AH, '0' ;;dezena
+    add AL, '0' ;; Unidade
+    add AH, '0' ;; Dezena
 
     ;;3. atualizar a variavel TEMPO_DECORRIDO_TEXT
     cld
@@ -980,6 +985,35 @@ REFRESH_TEMPO_DECORRIDO proc
     pop CX
     ret
 endp
+
+REFRESH_SCORE proc
+    ;;Essa funcao eh responsavel por atualizar a variavel SCORE_TEXT
+    push CX
+    push DX
+    push AX
+    push DI
+
+    ;;converte SCORE para caracteres ASCII e já armazenar em SCORE_TEXT
+    xor ax, ax
+    mov ax, SCORE
+    mov cx, 10
+    mov di, offset SCORE_TEXT
+
+    LOOP_CONVERT_SCORE:
+    xor dx, dx
+    div cx
+    add dl, '0'
+    mov [di], dl
+    inc di
+    cmp ax, ax
+    jne LOOP_CONVERT_SCORE
+
+    pop DI
+    pop AX
+    pop DX
+    pop CX
+    ret
+endp 
 
 DRAW_GAME_OVER proc
     push BX
@@ -1015,6 +1049,59 @@ DRAW_MAPA proc
     ret
 endp
 
+SETUP_TITULO_SETOR proc
+    ;; Configura o titulo do setor atual e atualiza o score
+
+    push AX
+    push BX
+
+    ;------PINTA TELA DE FUNDO------
+    call SET_VIDEO_MODE
+    call DRAW_TITULO_SETOR
+    
+    ;------ATUALIZA SCORE------
+    ;1.pontos bonus por nave destruida no setor
+    mov AL, NAVES_DESTRUIDAS
+    mov BX, 1000
+    mul BX
+    cmp SETOR_ATUAL, 2
+    je BONUS_SET2
+    cmp SETOR_ATUAL, 3
+    je BONUS_SET3
+    BONUS_SET2:
+    mul 2
+    jmp ADD_SCORE
+    BONUS_SET3:
+    mul 0
+    jmp ADD_SCORE
+    ADD_SCORE:
+    add SCORE, AX
+    ;2.pontos onus por naves que fugiram
+    xor AX, AX
+    mov AL, 10
+    cmp SETOR_ATUAL, 2
+    je ONUS_SET2
+    cmp SETOR_ATUAL, 3
+    je ONUS_SET3
+    ONUS_SET2:
+    mul 2
+    jmp SUB_SCORE
+    ONUS_SET3:
+    mul 3
+    jmp SUB_SCORE
+    SUB_SCORE:
+    sub SCORE, AX
+
+
+    ;---RESET de variaveis---
+    mov TICKS, 0
+    mov NAVES_DESTRUIDAS, 0
+    mov ALIENS_FUGIRAM, 0
+
+    pop BX
+    pop AX
+    ret
+endp
 SETUP_TELA_JOGO proc
     mov [NAVE_PRINCIPAL_X], 2Fh
     mov [NAVE_PRINCIPAL_Y], 50h
@@ -1084,9 +1171,7 @@ INICIO:
 
     ;-----------TELA TITULO SETOR----------------
     COMECAR_JOGO:
-    call SET_VIDEO_MODE
-    call DRAW_TITULO_SETOR
-    mov TICKS, 0
+    call SETUP_TITULO_SETOR
     AWAIT_SETOR:
     ; Intervalo de 35 ms (35000 microssegundos)
     xor CX, CX          ; Parte superior (16 bits mais significativos)
@@ -1109,6 +1194,7 @@ INICIO:
     int 15h             ; Executa o delay de 35 ms
     add TICKS, 1
     call REFRESH_TEMPO_DECORRIDO
+    call REFRESH_SCORE
     
     call MOVE_NAVE_PRINCIPAL
     call MOVE_NAVE_ALIENIGENA
