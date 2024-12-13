@@ -91,7 +91,7 @@
     SCORE_TEXT db 5 dup("0")
     LABEL_TEMPO_DECORRIDO db "TEMPO:$"
     TEMPO_DECORRIDO_TEXT db 2 dup("0")
-    SAIR_MENU_TEXT db "APERTE 'r' para voltar ao menu$"
+    SAIR_MENU_TEXT db "APERTE uma tecla para voltar ao menu$"
 
     SCORE dw 0h
     SETOR_ATUAL db 1 ;;setor atual do jogo
@@ -1081,7 +1081,7 @@ DRAW_END_GAME proc
     mov BL, 0Fh  ; cor do texto (verde branco)
     mov AL, 0h   ; modo de cores
     MOV DH, 18h  ; linha 0
-    MOV DL, 5h  ; coluna 0
+    MOV DL, 4h  ; coluna 0
     lea BP, SAIR_MENU_TEXT
     mov CX, 1eh ; numero de caracteres
     mov AH, 13h           ; define funcao de escrita
